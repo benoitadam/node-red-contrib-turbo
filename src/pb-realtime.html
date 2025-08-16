@@ -1,0 +1,42 @@
+<script type="text/javascript">
+    RED.nodes.registerType('pb-realtime', {
+        category: 'pocketbase',
+        color: '#a6bbcf',
+        defaults: {
+            name: { value: "" },
+            collection: { value: "" },
+            action: { value: "subscribe" }
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "link.png",
+        paletteLabel: 'realtime',
+        label: function() {
+            return this.name || `Realtime ${this.action}`;
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="pb-realtime">
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-action"><i class="icon-play"></i> Action</label>
+        <select id="node-input-action">
+            <option value="subscribe">Subscribe</option>
+            <option value="unsubscribe">Unsubscribe</option>
+        </select>
+    </div>
+    <div class="form-row">
+        <label for="node-input-collection"><i class="icon-table"></i> Collection</label>
+        <input type="text" id="node-input-collection" placeholder="Collection name">
+    </div>
+</script>
+
+<script type="text/html" data-help-name="pb-realtime">
+    <p>Subscribe to real-time changes in PocketBase collections.</p>
+    <p>Outputs messages when records are created, updated or deleted.</p>
+    <p>Use msg.action = 'subscribe'/'unsubscribe' or configure in node settings.</p>
+</script>

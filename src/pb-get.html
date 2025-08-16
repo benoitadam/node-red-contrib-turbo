@@ -1,0 +1,73 @@
+<script type="text/javascript">
+    RED.nodes.registerType('pb-get', {
+        category: 'pocketbase',
+        color: '#a6bbcf',
+        defaults: {
+            name: { value: "" },
+            collection: { value: "" },
+            recordId: { value: "" },
+            expand: { value: "" }
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "file.png",
+        paletteLabel: 'get',
+        label: function() {
+            return this.name || `Get ${this.collection || ''}`;
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="pb-get">
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-collection"><i class="icon-table"></i> Collection</label>
+        <input type="text" id="node-input-collection" placeholder="Collection name or leave empty for msg.collection">
+    </div>
+    <div class="form-row">
+        <label for="node-input-recordId"><i class="icon-file"></i> Record ID</label>
+        <input type="text" id="node-input-recordId" placeholder="Record ID or leave empty for msg.recordId or payload.id">
+    </div>
+    <div class="form-row">
+        <label for="node-input-expand"><i class="icon-share"></i> Expand</label>
+        <input type="text" id="node-input-expand" placeholder="user,category">
+    </div>
+</script>
+
+<script type="text/html" data-help-name="pb-get">
+    <p>Retrieve a single record from a PocketBase collection by ID.</p>
+    
+    <h3>Configuration</h3>
+    <ul>
+        <li><strong>Collection:</strong> PocketBase collection name (can be overridden by msg.collection)</li>
+        <li><strong>Record ID:</strong> Default record ID (can be overridden by msg.recordId or payload.id)</li>
+        <li><strong>Expand:</strong> Default relation fields to expand (can be overridden by msg.expand)</li>
+    </ul>
+
+    <h3>Input Properties</h3>
+    <dl class="message-properties">
+        <dt>collection <span class="property-type">string</span></dt>
+        <dd>Collection name (overrides node config)</dd>
+        <dt>recordId <span class="property-type">string</span></dt>
+        <dd>Record ID to retrieve (required if not in config)</dd>
+        <dt>payload.id <span class="property-type">string</span></dt>
+        <dd>Alternative way to pass record ID via payload</dd>
+        <dt>expand <span class="property-type">string</span></dt>
+        <dd>Comma-separated relation fields to expand</dd>
+    </dl>
+
+    <h3>Outputs</h3>
+    <dl class="message-properties">
+        <dt>payload <span class="property-type">object</span></dt>
+        <dd>Single record data</dd>
+        <dt>pb <span class="property-type">PocketBase</span></dt>
+        <dd>Authenticated PocketBase client for chaining</dd>
+    </dl>
+
+    <h3>Examples</h3>
+    <p><strong>Expand:</strong> <code>user,category</code> to expand user and category relations</p>
+    <p><strong>Record ID:</strong> Can be set in config for fixed records or passed via msg.recordId or payload.id for dynamic retrieval</p>
+</script>

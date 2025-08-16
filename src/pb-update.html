@@ -1,0 +1,85 @@
+<script type="text/javascript">
+    RED.nodes.registerType('pb-update', {
+        category: 'pocketbase',
+        color: '#a6bbcf',
+        defaults: {
+            name: { value: "" },
+            collection: { value: "" },
+            recordId: { value: "" },
+            expand: { value: "" },
+            json: { value: "" }
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "edit.png",
+        paletteLabel: 'update',
+        label: function() {
+            return this.name || `Update ${this.collection || ''}`;
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="pb-update">
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-collection"><i class="icon-table"></i> Collection</label>
+        <input type="text" id="node-input-collection" placeholder="Collection name or leave empty for msg.collection">
+    </div>
+    <div class="form-row">
+        <label for="node-input-recordId"><i class="icon-file"></i> Record ID</label>
+        <input type="text" id="node-input-recordId" placeholder="Record ID or leave empty for msg.recordId">
+    </div>
+    <div class="form-row">
+        <label for="node-input-expand"><i class="icon-share"></i> Expand</label>
+        <input type="text" id="node-input-expand" placeholder="user,category">
+    </div>
+    <div class="form-row">
+        <label for="node-input-json"><i class="icon-code"></i> JSON Data</label>
+        <textarea id="node-input-json" placeholder='{"name": "value", "field": "data"}' rows="4" style="width:70%; font-family: monospace;"></textarea>
+        <div class="form-tips">Optional: Static JSON data to update. If empty, uses msg.payload</div>
+    </div>
+</script>
+
+<script type="text/html" data-help-name="pb-update">
+    <p>Update an existing record in a PocketBase collection.</p>
+    
+    <h3>Configuration</h3>
+    <ul>
+        <li><strong>Collection:</strong> PocketBase collection name (can be overridden by msg.collection)</li>
+        <li><strong>Record ID:</strong> Default record ID (can be overridden by msg.recordId)</li>
+        <li><strong>Expand:</strong> Default relation fields to expand in updated record (can be overridden by msg.expand)</li>
+        <li><strong>JSON Data:</strong> Static JSON data to update. If provided, takes precedence over payload</li>
+    </ul>
+
+    <h3>Input Properties</h3>
+    <dl class="message-properties">
+        <dt>collection <span class="property-type">string</span></dt>
+        <dd>Collection name (overrides node config)</dd>
+        <dt>recordId <span class="property-type">string</span></dt>
+        <dd>Record ID to update (required if not in config)</dd>
+        <dt>payload <span class="property-type">object</span></dt>
+        <dd>Record data to update (used if no JSON data configured)</dd>
+        <dt>expand <span class="property-type">string</span></dt>
+        <dd>Comma-separated relation fields to expand in response</dd>
+    </dl>
+
+    <h3>Outputs</h3>
+    <dl class="message-properties">
+        <dt>payload <span class="property-type">object</span></dt>
+        <dd>Updated record data with new timestamps</dd>
+        <dt>pb <span class="property-type">PocketBase</span></dt>
+        <dd>Authenticated PocketBase client for chaining</dd>
+    </dl>
+
+    <h3>Examples</h3>
+    <p><strong>Data:</strong> <code>{ "name": "John Updated", "status": "active" }</code></p>
+    <p><strong>Expand:</strong> <code>user,category</code> to expand relations in updated record</p>
+    
+    <h3>Notes</h3>
+    <p>Priority order for data: 1) JSON Data field, 2) <code>msg.payload</code>. 
+    Only the fields provided will be updated. Other fields remain unchanged.
+    PocketBase will automatically update the 'updated' timestamp.</p>
+</script>
