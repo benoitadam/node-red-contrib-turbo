@@ -18,9 +18,12 @@ const config = {
   minify: false
 };
 
-for (const f of templates) {
-  copyFileSync(join('src', f), join('dist', f));
-}
-
 // Build
-build(config).catch(() => process.exit(1));
+build(config)
+  .then(() => {
+    for (const f of templates) {
+      copyFileSync(join('src', f), join('dist', f));
+    }
+    copyFileSync(join('src', 'pocketbase.png'), join('dist', 'pocketbase.png'));
+  })
+  .catch(() => process.exit(1));
