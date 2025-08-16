@@ -8,6 +8,14 @@
     "pocketbase",
     "auth"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/benoitadam/node-red-contrib-pocketbase.git"
+  },
+  "homepage": "https://github.com/benoitadam/node-red-contrib-pocketbase",
+  "bugs": {
+    "url": "https://github.com/benoitadam/node-red-contrib-pocketbase/issues"
+  },
   "dependencies": {
     "pocketbase": "^0.21.5",
     "typescript": "^5.0.0"
