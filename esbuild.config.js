@@ -1,5 +1,5 @@
 const { build } = require('esbuild');
-const { readdirSync, copyFileSync } = require('node:fs');
+const { readdirSync, copyFileSync, mkdirSync, cpSync } = require('node:fs');
 const { join } = require('node:path');
 
 const list = readdirSync('src');
@@ -24,6 +24,8 @@ build(config)
     for (const f of templates) {
       copyFileSync(join('src', f), join('dist', f));
     }
-    copyFileSync(join('src', 'pocketbase.png'), join('dist', 'pocketbase.png'));
+    // Copier le dossier icons
+    mkdirSync(join('dist', 'icons'), { recursive: true });
+    cpSync(join('src', 'icons'), join('dist', 'icons'), { recursive: true });
   })
   .catch(() => process.exit(1));
