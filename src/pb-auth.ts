@@ -16,12 +16,9 @@ module.exports = (RED: NodeAPI) => {
                 msg.pbAuth = auth;
                 msg.pb = pb;
                 msg.payload = {
-                    ...auth,
+                    url: auth.url,
                     headers: { Authorization: auth.token },
-                    apiUrl: `${auth.url}/api`,
-                    shemaUrl: `${auth.url}/api/collections`,
                 };
-                delete msg.payload.password;
                 this.send(msg);
             } catch (error) {
                 this.error(`PB Auth failed: ${error}`, msg);
