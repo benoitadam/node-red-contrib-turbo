@@ -5,7 +5,9 @@
         defaults: {
             name: { value: "" },
             collection: { value: "" },
-            action: { value: "subscribe" }
+            action: { value: "subscribe" },
+            topic: { value: "*" },
+            recordId: { value: "" }
         },
         inputs: 1,
         outputs: 1,
@@ -13,6 +15,21 @@
         paletteLabel: 'realtime',
         label: function() {
             return this.name || `Realtime ${this.action}`;
+        },
+        oneditprepare: function() {
+            const topicSelect = $("#node-input-topic");
+            const recordIdRow = $("#node-input-recordId-row");
+            
+            function toggleRecordIdField() {
+                if (topicSelect.val() === "recordId") {
+                    recordIdRow.show();
+                } else {
+                    recordIdRow.hide();
+                }
+            }
+            
+            topicSelect.on("change", toggleRecordIdField);
+            toggleRecordIdField();
         }
     });
 </script>
@@ -33,10 +50,51 @@
         <label for="node-input-collection"><i class="icon-table"></i> Collection</label>
         <input type="text" id="node-input-collection" placeholder="Collection name">
     </div>
+    <div class="form-row">
+        <label for="node-input-topic"><i class="icon-star"></i> Topic</label>
+        <select id="node-input-topic">
+            <option value="*">All changes (*)</option>
+            <option value="create">Create events</option>
+            <option value="update">Update events</option>
+            <option value="delete">Delete events</option>
+            <option value="recordId">Record ID</option>
+        </select>
+    </div>
+    <div class="form-row" id="node-input-recordId-row" style="display:none;">
+        <label for="node-input-recordId"><i class="icon-file"></i> Record ID</label>
+        <input type="text" id="node-input-recordId" placeholder="Leave empty to use msg.recordId or msg.payload.id">
+    </div>
 </script>
 
 <script type="text/html" data-help-name="pb-realtime">
     <p>Subscribe to real-time changes in PocketBase collections.</p>
-    <p>Outputs messages when records are created, updated or deleted.</p>
-    <p>Use msg.action = 'subscribe'/'unsubscribe' or configure in node settings.</p>
+    
+    <h3>Configuration</h3>
+    <ul>
+        <li><strong>Action:</strong> Subscribe or unsubscribe to/from real-time events</li>
+        <li><strong>Collection:</strong> PocketBase collection name to monitor</li>
+        <li><strong>Topic:</strong> Choose what to monitor:
+            <ul>
+                <li>All changes (*) - Monitor all events</li>
+                <li>Create events - Only record creations</li>
+                <li>Update events - Only record updates</li>
+                <li>Delete events - Only record deletions</li>
+                <li>Record ID - Monitor a specific record</li>
+            </ul>
+        </li>
+        <li><strong>Record ID:</strong> Specific record to monitor (only when topic is "Record ID")</li>
+    </ul>
+    
+    <h3>Dynamic Configuration</h3>
+    <p>Configuration can be overridden via message properties:</p>
+    <ul>
+        <li><code>msg.action</code> - subscribe/unsubscribe</li>
+        <li><code>msg.collection</code> - collection name</li>
+        <li><code>msg.topic</code> - subscription topic</li>
+        <li><code>msg.recordId</code> - record ID (for specific record monitoring)</li>
+        <li><code>msg.payload.id</code> - alternative way to specify record ID</li>
+    </ul>
+    
+    <h3>Outputs</h3>
+    <p>Outputs messages when records are created, updated or deleted, plus subscription status messages.</p>
 </script>
