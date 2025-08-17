@@ -37,8 +37,7 @@
       "pb-create": "dist/pb-create.js",
       "pb-update": "dist/pb-update.js",
       "pb-delete": "dist/pb-delete.js",
-      "pb-realtime": "dist/pb-realtime.js",
-      "pb-schema": "dist/pb-schema.js"
+      "pb-realtime": "dist/pb-realtime.js"
     }
   },
   "devDependencies": {

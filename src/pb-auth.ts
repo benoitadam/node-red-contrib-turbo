@@ -15,7 +15,12 @@ module.exports = (RED: NodeAPI) => {
                 const { pb, auth } = await pbAuth(this, info);
                 msg.pbAuth = auth;
                 msg.pb = pb;
-                msg.payload = { token: auth.token };
+                msg.payload = {
+                    ...auth,
+                    headers: { Authorization: auth.token },
+                    apiUrl: `${auth.url}/api`,
+                    shemaUrl: `${auth.url}/api/collections`,
+                };
                 this.send(msg);
             } catch (error) {
                 this.error(`PB Auth failed: ${error}`, msg);
