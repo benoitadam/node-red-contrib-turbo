@@ -66,7 +66,7 @@ export const pbAuth = async (msg: any, info?: PBInfo): Promise<PocketBase> => {
     if (!msg) msg = {};
     const env = process.env || {};
 
-    const i = info || isObject(msg.pbInfo) ? msg.pbInfo : {};
+    const i = info || (isObject(msg.pbInfo) ? msg.pbInfo : {});
 
     const url = i.url || env.PB_URL || '';
     if (!isString(url)) throw pbPropError('PB URL');
