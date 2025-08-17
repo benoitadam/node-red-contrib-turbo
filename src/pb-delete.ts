@@ -1,5 +1,5 @@
 import { NodeAPI, Node, NodeDef } from 'node-red';
-import { isString, pbWithRetry, propError } from './common';
+import { isString, pbRetry, pbPropError } from './common';
 
 export interface PBDeleteNodeDef extends NodeDef {
     name: string;
@@ -17,12 +17,12 @@ module.exports = (RED: NodeAPI) => {
                 const collection = def.collection || msg.collection || p.collectionName;
                 const id = def.recordId || msg.recordId || p.id;
 
-                if (!isString(collection)) throw propError('Collection');
-                if (!id) throw propError('Record ID');
+                if (!isString(collection)) throw pbPropError('Collection');
+                if (!id) throw pbPropError('Record ID');
 
                 this.debug(`PB Delete: ${collection}/${id}`);
 
-                const isDeleted = await pbWithRetry(this, msg, async (pb) => {
+                const isDeleted = await pbRetry(this, msg, async (pb) => {
                     return await pb.collection(collection).delete(id);
                 });
                 msg.payload = isDeleted;

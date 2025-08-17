@@ -1,5 +1,5 @@
 import { NodeAPI, Node, NodeDef } from 'node-red';
-import { isObject, isString, pbWithRetry, propError } from './common';
+import { isObject, isString, pbRetry, pbPropError } from './common';
 
 export interface PBCreateNodeDef extends NodeDef {
     name: string;
@@ -27,12 +27,12 @@ module.exports = (RED: NodeAPI) => {
                 const collection = def.collection || msg.collection || '';
                 const expand = def.expand || msg.expand || '';
 
-                if (!isString(collection)) throw propError('Collection');
-                if (!isObject(data)) throw propError('Record data');
+                if (!isString(collection)) throw pbPropError('Collection');
+                if (!isObject(data)) throw pbPropError('Record data');
 
                 this.debug(`PB Create: ${collection} expand='${expand}'`);
 
-                const result = await pbWithRetry(this, msg, async (pb) => {
+                const result = await pbRetry(this, msg, async (pb) => {
                     return await pb.collection(collection).create(data, { expand });
                 });
 

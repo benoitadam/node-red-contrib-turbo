@@ -1,5 +1,5 @@
 import { NodeAPI, Node, NodeDef } from 'node-red';
-import { pbAuth, pbAuthInfo, pbAutoAuth, propError } from './common';
+import { pbClient, pbPropError } from './common';
 
 export interface PBRealtimeNodeDef extends NodeDef {
     name: string;
@@ -51,7 +51,7 @@ module.exports = (RED: NodeAPI) => {
         
         this.on('input', async (msg: any) => {
             try {
-                const pb = await pbAutoAuth(this, msg);
+                const pb = await pbClient(msg);
                 
                 const payload = msg.payload || {};
                 const collection = def.collection || msg.collection;
@@ -60,7 +60,7 @@ module.exports = (RED: NodeAPI) => {
                 // Logique simplifiée du topic : def.topic || msg.topic || def.recordId || msg.recordId || payload.id || '*'
                 const subscriptionTopic = def.topic || msg.topic || (def as any).recordId || msg.recordId || payload.id || '*';
 
-                if (!collection) throw propError('Collection');
+                if (!collection) throw pbPropError('Collection');
                 
                 if (action === 'subscribe') {
                     // Configure les événements de connexion/déconnexion

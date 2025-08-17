@@ -1,5 +1,5 @@
 import { NodeAPI, Node, NodeDef } from 'node-red';
-import { isNumber, isString, pbWithRetry, propError } from './common';
+import { isSafeNumber, isString, pbRetry, pbPropError } from './common';
 
 export interface PBListNodeDef extends NodeDef {
     name: string;
@@ -27,19 +27,19 @@ module.exports = (RED: NodeAPI) => {
                 const expand = def.expand || msg.expand || '';
                 const mode = def.mode || msg.mode || 'page';
 
-                if (!isString(collection)) throw propError('Collection');
+                if (!isString(collection)) throw pbPropError('Collection');
                 if (mode !== 'first') {
-                    if (!isNumber(page) || page < 1) throw propError('Page');
-                    if (!isNumber(perPage) || perPage < 1 || perPage > 99999) throw propError('Per Page');
+                    if (!isSafeNumber(page) || page < 1) throw pbPropError('Page');
+                    if (!isSafeNumber(perPage) || perPage < 1 || perPage > 99999) throw pbPropError('Per Page');
                 }
-                if (!isString(filter)) throw propError('Filter');
-                if (!isString(sort)) throw propError('Sort');
-                if (!isString(mode)) throw propError('Mode');
+                if (!isString(filter)) throw pbPropError('Filter');
+                if (!isString(sort)) throw pbPropError('Sort');
+                if (!isString(mode)) throw pbPropError('Mode');
 
                 this.debug(`PB List: ${collection} page=${page} perPage=${perPage} filter='${filter}' sort='${sort}' mode=${mode}`);
 
                 if (mode === 'first') {
-                    const result = await pbWithRetry(this, msg, async (pb) => {
+                    const result = await pbRetry(this, msg, async (pb) => {
                         return await pb.collection(collection).getList(1, 1, {
                             filter,
                             sort,
@@ -49,7 +49,7 @@ module.exports = (RED: NodeAPI) => {
                     msg.payload = result.items[0] || null;
                     this.send(msg);
                 } else {
-                    const result = await pbWithRetry(this, msg, async (pb) => {
+                    const result = await pbRetry(this, msg, async (pb) => {
                         return await pb.collection(collection).getList(page, perPage, {
                             filter,
                             sort,

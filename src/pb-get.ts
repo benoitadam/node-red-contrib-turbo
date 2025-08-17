@@ -1,5 +1,5 @@
 import { NodeAPI, Node, NodeDef } from 'node-red';
-import { isString, pbWithRetry, propError } from './common';
+import { isString, pbRetry, pbPropError } from './common';
 
 export interface PBGetNodeDef extends NodeDef {
     name: string;
@@ -19,13 +19,13 @@ module.exports = (RED: NodeAPI) => {
                 const id = def.recordId || msg.recordId || p.id;
                 const expand = def.expand || msg.expand || '';
 
-                if (!isString(collection)) throw propError('Collection');
-                if (!id) throw propError('Record ID');
-                if (!isString(expand)) throw propError('Expand');
+                if (!isString(collection)) throw pbPropError('Collection');
+                if (!id) throw pbPropError('Record ID');
+                if (!isString(expand)) throw pbPropError('Expand');
 
                 this.debug(`PB Get: ${collection}/${id} expand='${expand}'`);
 
-                const result = await pbWithRetry(this, msg, async (pb) => {
+                const result = await pbRetry(this, msg, async (pb) => {
                     return await pb.collection(collection).getOne(id, { expand });
                 });
 

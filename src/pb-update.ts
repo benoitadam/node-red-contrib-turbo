@@ -1,5 +1,5 @@
 import { NodeAPI, Node, NodeDef } from 'node-red';
-import { isObject, isString, pbWithRetry, propError } from './common';
+import { isObject, isString, pbRetry, pbPropError } from './common';
 
 export interface PBUpdateNodeDef extends NodeDef {
     name: string;
@@ -28,14 +28,14 @@ module.exports = (RED: NodeAPI) => {
                     }
                 }
 
-                if (!isString(collection)) throw propError('Collection');
-                if (!isString(id)) throw propError('Record ID');
-                if (!isString(expand)) throw propError('Expand');
-                if (!isObject(data)) throw propError('Record data');
+                if (!isString(collection)) throw pbPropError('Collection');
+                if (!isString(id)) throw pbPropError('Record ID');
+                if (!isString(expand)) throw pbPropError('Expand');
+                if (!isObject(data)) throw pbPropError('Record data');
 
                 this.debug(`PB Update: ${collection}/${id} expand='${expand}'`);
 
-                const result = await pbWithRetry(this, msg, async (pb) => {
+                const result = await pbRetry(this, msg, async (pb) => {
                     return await pb.collection(collection).update(id, data, { expand });
                 });
 

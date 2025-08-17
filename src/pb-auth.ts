@@ -1,7 +1,7 @@
 import { NodeAPI, Node, NodeDef } from 'node-red';
-import { pbAuth, pbAuthInfo, PBAuth } from './common';
+import { pbAuth, isObject, PBInfo, getPBAuth, pbClient } from './common';
 
-export interface PBAuthNodeDef extends NodeDef, PBAuth {
+export interface PBAuthNodeDef extends NodeDef, PBInfo {
     name: string;
 }
 
@@ -11,14 +11,10 @@ module.exports = (RED: NodeAPI) => {
 
         this.on('input', async (msg: any) => {
             try {
-                const info = pbAuthInfo(this, { ...def, ...msg.pbAuth, ...msg.payload });
-                const { pb, auth } = await pbAuth(this, info);
-                msg.pbAuth = auth;
-                msg.pb = pb;
-                msg.payload = {
-                    url: auth.url,
-                    headers: { Authorization: auth.token },
-                };
+                const o = isObject(msg.payload) ? { ...msg.payload, ...def } : def;
+                const pb = await pbAuth(msg, o);
+                msg.payload = { ...getPBAuth(pb) };
+                delete msg.payload.password;
                 this.send(msg);
             } catch (error) {
                 this.error(`PB Auth failed: ${error}`, msg);
