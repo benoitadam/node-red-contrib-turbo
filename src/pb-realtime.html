@@ -6,8 +6,7 @@
             name: { value: "" },
             collection: { value: "" },
             action: { value: "subscribe" },
-            topic: { value: "*" },
-            recordId: { value: "" }
+            topic: { value: "*" }
         },
         inputs: 1,
         outputs: 1,
@@ -15,21 +14,6 @@
         paletteLabel: 'realtime',
         label: function() {
             return this.name || `Realtime ${this.action}`;
-        },
-        oneditprepare: function() {
-            const topicSelect = $("#node-input-topic");
-            const recordIdRow = $("#node-input-recordId-row");
-            
-            function toggleRecordIdField() {
-                if (topicSelect.val() === "recordId") {
-                    recordIdRow.show();
-                } else {
-                    recordIdRow.hide();
-                }
-            }
-            
-            topicSelect.on("change", toggleRecordIdField);
-            toggleRecordIdField();
         }
     });
 </script>
@@ -52,17 +36,8 @@
     </div>
     <div class="form-row">
         <label for="node-input-topic"><i class="icon-star"></i> Topic</label>
-        <select id="node-input-topic">
-            <option value="*">All changes (*)</option>
-            <option value="create">Create events</option>
-            <option value="update">Update events</option>
-            <option value="delete">Delete events</option>
-            <option value="recordId">Record ID</option>
-        </select>
-    </div>
-    <div class="form-row" id="node-input-recordId-row" style="display:none;">
-        <label for="node-input-recordId"><i class="icon-file"></i> Record ID</label>
-        <input type="text" id="node-input-recordId" placeholder="Leave empty to use msg.recordId or msg.payload.id">
+        <input type="text" id="node-input-topic" placeholder="Leave empty for all changes (*) or specify record ID">
+        <div class="form-tips">Use "*" for all changes or specify a record ID to monitor only that record</div>
     </div>
 </script>
 
@@ -73,26 +48,20 @@
     <ul>
         <li><strong>Action:</strong> Subscribe or unsubscribe to/from real-time events</li>
         <li><strong>Collection:</strong> PocketBase collection name to monitor</li>
-        <li><strong>Topic:</strong> Choose what to monitor:
+        <li><strong>Topic:</strong> Subscription target:
             <ul>
-                <li>All changes (*) - Monitor all events</li>
-                <li>Create events - Only record creations</li>
-                <li>Update events - Only record updates</li>
-                <li>Delete events - Only record deletions</li>
-                <li>Record ID - Monitor a specific record</li>
+                <li>Leave empty or "*" - Monitor all changes</li>
+                <li>Specify record ID - Monitor only that specific record</li>
             </ul>
         </li>
-        <li><strong>Record ID:</strong> Specific record to monitor (only when topic is "Record ID")</li>
     </ul>
     
     <h3>Dynamic Configuration</h3>
-    <p>Configuration can be overridden via message properties:</p>
+    <p>Configuration can be overridden via message properties (priority order):</p>
     <ul>
         <li><code>msg.action</code> - subscribe/unsubscribe</li>
         <li><code>msg.collection</code> - collection name</li>
-        <li><code>msg.topic</code> - subscription topic</li>
-        <li><code>msg.recordId</code> - record ID (for specific record monitoring)</li>
-        <li><code>msg.payload.id</code> - alternative way to specify record ID</li>
+        <li><strong>Topic priority:</strong> <code>def.topic</code> → <code>msg.topic</code> → <code>msg.recordId</code> → <code>msg.payload.id</code> → <code>"*"</code></li>
     </ul>
     
     <h3>Outputs</h3>

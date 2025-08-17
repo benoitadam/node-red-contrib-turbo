@@ -1,17 +1,21 @@
 import { NodeAPI, Node, NodeDef } from 'node-red';
 import { pbAuth, pbAuthInfo, pbAutoAuth, propError } from './common';
 
-
 export interface PBRealtimeNodeDef extends NodeDef {
     name: string;
     collection: string;
     action: string;
     topic: string;
-    recordId: string;
 }
 
 module.exports = (RED: NodeAPI) => {
     const PBRealtimeNode = function(this: Node, def: PBRealtimeNodeDef) {
+
+        // Polyfill EventSource
+        if (typeof global !== 'undefined' && !global.EventSource) {
+            global.EventSource = require('eventsource').EventSource;
+        }
+
         const subscriptions: { [key: string]: () => void } = {};
         let connectionStatusSetup = false;
 
@@ -52,17 +56,9 @@ module.exports = (RED: NodeAPI) => {
                 const payload = msg.payload || {};
                 const collection = def.collection || msg.collection;
                 const action = def.action || msg.action || 'subscribe';
-                const topic = def.topic || msg.topic || '*';
                 
-                // Détermine l'ID du record selon le topic
-                let subscriptionTopic = '*';
-                if (topic === 'recordId') {
-                    const id = def.recordId || msg.recordId || payload.id;
-                    if (!id) throw propError('Record ID (when topic is Record ID)');
-                    subscriptionTopic = id;
-                } else {
-                    subscriptionTopic = topic;
-                }
+                // Logique simplifiée du topic : def.topic || msg.topic || def.recordId || msg.recordId || payload.id || '*'
+                const subscriptionTopic = def.topic || msg.topic || (def as any).recordId || msg.recordId || payload.id || '*';
 
                 if (!collection) throw propError('Collection');
                 
