@@ -14,7 +14,7 @@ export interface PBInfo {
 
 export const isObject = <T extends {}>(v: unknown): v is T => typeof v === "object" && v !== null;
 export const isString = (v: any): v is string => typeof v === 'string';
-export const isSafeNumber = (v: any): v is number => typeof v === 'number' && !Number.isNaN(v) && !Number.isFinite(v);
+export const isSafeNumber = (v: any): v is number => typeof v === 'number' && !Number.isNaN(v);
 const isBool = (v: any): v is boolean => v === true || v === false;
 
 export const pbData = (data: any): any => {
@@ -130,7 +130,8 @@ const pbRefresh = async (pb: PocketBase) => {
         return pb;
     }
     catch (error) {
-        const newPb = await pbAuth(getPBAuth(pb));
+        const info = getPBAuth(pb);
+        const newPb = await pbAuth({}, info);
         return newPb;
     }
 }
