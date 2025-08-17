@@ -17,6 +17,7 @@
     "url": "https://github.com/benoitadam/node-red-contrib-pocketbase/issues"
   },
   "dependencies": {
+    "eventsource": "^4.0.0",
     "pocketbase": "^0.21.5",
     "typescript": "^5.0.0"
   },

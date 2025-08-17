@@ -1,6 +1,11 @@
 import { NodeAPI, Node, NodeDef } from 'node-red';
 import { pbAuth, pbAuthInfo, pbAutoAuth, propError } from './common';
 
+// Polyfill EventSource pour Node.js
+if (typeof global !== 'undefined' && !global.EventSource) {
+    global.EventSource = require('eventsource');
+}
+
 export interface PBRealtimeNodeDef extends NodeDef {
     name: string;
     collection: string;
