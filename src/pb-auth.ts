@@ -12,9 +12,7 @@ module.exports = (RED: NodeAPI) => {
         this.on('input', async (msg: any) => {
             try {
                 const o = isObject(msg.payload) ? { ...msg.payload, ...def } : def;
-                const pb = await pbAuth(msg, o);
-                msg.payload = { ...getPBAuth(pb) };
-                delete msg.payload.password;
+                await pbAuth(msg, o);
                 this.send(msg);
             } catch (error) {
                 this.error(`PB Auth failed: ${error}`, msg);
