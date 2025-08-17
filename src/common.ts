@@ -1,14 +1,14 @@
 // Polyfill EventSource pour Node.js AVANT d'importer PocketBase
 if (typeof global !== 'undefined' && typeof window === 'undefined') {
     try {
-        const EventSourcePolyfill = require('eventsource');
-        global.EventSource = EventSourcePolyfill;
+        // Import correct du module eventsource (export nommé)
+        const { EventSource: EventSourcePolyfill } = require('eventsource');
         
-        // Vérification que le polyfill fonctionne
-        if (typeof global.EventSource === 'function') {
+        if (typeof EventSourcePolyfill === 'function') {
+            global.EventSource = EventSourcePolyfill;
             console.debug('PB: EventSource polyfill loaded successfully');
         } else {
-            console.error('PB: EventSource polyfill failed - not a constructor');
+            console.error('PB: EventSource polyfill failed - not a constructor, type:', typeof EventSourcePolyfill);
         }
     } catch (e) {
         console.error('PB: Failed to load EventSource polyfill:', e);
