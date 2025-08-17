@@ -64,6 +64,7 @@ export const pbAuth = async (msg: any, info?: PBInfo): Promise<PocketBase> => {
     if (!isString(url)) throw pbPropError('PB URL');
 
     let pb = msg.pb || new PocketBase(url);
+    (pb as any).toJSON = () => null;
     msg.pb = pb;
 
     if (isString(i.token) && i.token.trim()) {

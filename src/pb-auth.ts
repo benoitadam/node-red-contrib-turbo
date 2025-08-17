@@ -1,5 +1,5 @@
 import { NodeAPI, Node, NodeDef } from 'node-red';
-import { pbAuth, isObject, PBInfo, getPBAuth, pbClient } from './common';
+import { pbAuth, isObject, PBInfo } from './common';
 
 export interface PBAuthNodeDef extends NodeDef, PBInfo {
     name: string;

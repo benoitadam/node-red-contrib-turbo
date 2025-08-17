@@ -41,13 +41,18 @@ module.exports = (RED: NodeAPI) => {
                         if (!response.ok) {
                             throw new Error(`Download failed: ${response.status} ${response.statusText}`);
                         }
-                        return await response.arrayBuffer();
+                        return { 
+                            data: await response.arrayBuffer(),
+                            contentType: response.headers.get('content-type') || 'application/octet-stream'
+                        };
                     });
 
                     if (mode === 'buffer') {
-                        msg.payload = Buffer.from(result);
+                        msg.payload = Buffer.from(result.data);
+                        msg.contentType = result.contentType;
                     } else if (mode === 'base64') {
-                        msg.payload = Buffer.from(result).toString('base64');
+                        const base64 = Buffer.from(result.data).toString('base64');
+                        msg.payload = `data:${result.contentType};base64,${base64}`;
                     }
                     
                     this.send(msg);
