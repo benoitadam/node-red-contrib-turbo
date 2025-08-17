@@ -1,5 +1,5 @@
 import { NodeAPI, Node, NodeDef } from 'node-red';
-import { isObject, isString, pbRetry, pbPropError } from './common';
+import { isObject, isString, pbRetry, pbPropError, pbData } from './common';
 
 export interface PBUpdateNodeDef extends NodeDef {
     name: string;
@@ -32,6 +32,8 @@ module.exports = (RED: NodeAPI) => {
                 if (!isString(id)) throw pbPropError('Record ID');
                 if (!isString(expand)) throw pbPropError('Expand');
                 if (!isObject(data)) throw pbPropError('Record data');
+
+                data = pbData(data);
 
                 this.debug(`PB Update: ${collection}/${id} expand='${expand}'`);
 

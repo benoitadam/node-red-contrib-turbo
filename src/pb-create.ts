@@ -1,5 +1,5 @@
 import { NodeAPI, Node, NodeDef } from 'node-red';
-import { isObject, isString, pbRetry, pbPropError } from './common';
+import { isObject, isString, pbRetry, pbPropError, pbData } from './common';
 
 export interface PBCreateNodeDef extends NodeDef {
     name: string;
@@ -29,6 +29,8 @@ module.exports = (RED: NodeAPI) => {
 
                 if (!isString(collection)) throw pbPropError('Collection');
                 if (!isObject(data)) throw pbPropError('Record data');
+
+                data = pbData(data);
 
                 this.debug(`PB Create: ${collection} expand='${expand}'`);
 

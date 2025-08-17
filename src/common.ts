@@ -17,6 +17,39 @@ export const isString = (v: any): v is string => typeof v === 'string';
 export const isSafeNumber = (v: any): v is number => typeof v === 'number' && !Number.isNaN(v) && !Number.isFinite(v);
 const isBool = (v: any): v is boolean => v === true || v === false;
 
+export const pbData = (data: any): any => {
+    if (!isObject(data)) throw pbPropError('data');
+    
+    const result: Record<string, any> = { ...data };
+    
+    for (const [k, v] of Object.entries(result)) {
+        if (Buffer.isBuffer(v)) {
+            const filename = `source`;
+            const type = 'application/octet-stream';
+            result[k] = new File([new Uint8Array(v)], filename, { type });
+        } else if (v && v.buffer && Buffer.isBuffer(v.buffer)) {
+            const filename = v.filename || `source`;
+            const type = v.mimetype || 'application/octet-stream';
+            result[k] = new File([new Uint8Array(v.buffer)], filename, { type });
+        } else if (Array.isArray(v)) {
+            result[k] = v.map((item, index) => {
+                if (Buffer.isBuffer(item)) {
+                    const filename = `source_${index}`;
+                    const type = 'application/octet-stream';
+                    return new File([new Uint8Array(item)], filename, { type });
+                } else if (item && item.buffer && Buffer.isBuffer(item.buffer)) {
+                    const filename = item.filename || `source_${index}`;
+                    const type = item.mimetype || 'application/octet-stream';
+                    return new File([new Uint8Array(item.buffer)], filename, { type });
+                }
+                return item;
+            });
+        }
+    }
+    
+    return result;
+};
+
 export const pbPropError = (name: string) => {
     const msg = `The PB property "${name}" is invalid`;
     return new Error(msg);

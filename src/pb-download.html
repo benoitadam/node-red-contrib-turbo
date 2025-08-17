@@ -1,0 +1,84 @@
+<script type="text/javascript">
+    RED.nodes.registerType('pb-download', {
+        category: 'PocketBase',
+        color: '#a6bbcf',
+        defaults: {
+            name: { value: "" },
+            collection: { value: "" },
+            recordId: { value: "" },
+            filename: { value: "" },
+            mode: { value: "buffer" }
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "pocketbase.svg",
+        paletteLabel: 'download',
+        label: function() {
+            return this.name || `Download ${this.collection || ''}`;
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="pb-download">
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-collection"><i class="icon-table"></i> Collection</label>
+        <input type="text" id="node-input-collection" placeholder="Collection name or leave empty for msg.collection">
+    </div>
+    <div class="form-row">
+        <label for="node-input-recordId"><i class="icon-file"></i> Record ID</label>
+        <input type="text" id="node-input-recordId" placeholder="Record ID or leave empty for msg.recordId or payload.id">
+    </div>
+    <div class="form-row">
+        <label for="node-input-filename"><i class="icon-download"></i> Filename</label>
+        <input type="text" id="node-input-filename" placeholder="Filename or leave empty for msg.filename">
+    </div>
+    <div class="form-row">
+        <label for="node-input-mode"><i class="icon-share"></i> Mode</label>
+        <select id="node-input-mode">
+            <option value="buffer">Buffer</option>
+            <option value="base64">Base64</option>
+            <option value="url">URL only</option>
+        </select>
+    </div>
+</script>
+
+<script type="text/html" data-help-name="pb-download">
+    <p>Downloads a file from PocketBase.</p>
+    
+    <h3>Configuration</h3>
+    <ul>
+        <li><strong>Collection:</strong> PocketBase collection name (can be overridden by msg.collection)</li>
+        <li><strong>Record ID:</strong> Default record ID (can be overridden by msg.recordId or payload.id)</li>
+        <li><strong>Filename:</strong> File field name (can be overridden by msg.filename)</li>
+        <li><strong>Mode:</strong> Download format: buffer, base64, or url only</li>
+    </ul>
+
+    <h3>Input Properties</h3>
+    <dl class="message-properties">
+        <dt>collection <span class="property-type">string</span></dt>
+        <dd>Collection name (overrides node config)</dd>
+        <dt>recordId <span class="property-type">string</span></dt>
+        <dd>Record ID containing the file (required if not in config)</dd>
+        <dt>filename <span class="property-type">string</span></dt>
+        <dd>File field name (required if not in config)</dd>
+        <dt>mode <span class="property-type">string</span></dt>
+        <dd>Download mode: "buffer", "base64", or "url"</dd>
+    </dl>
+
+    <h3>Outputs</h3>
+    <dl class="message-properties">
+        <dt>payload <span class="property-type">buffer | string</span></dt>
+        <dd>Downloaded file as buffer, base64 string, or file URL depending on mode</dd>
+        <dt>pb <span class="property-type">PocketBase</span></dt>
+        <dd>Authenticated PocketBase client for chaining</dd>
+    </dl>
+
+    <h3>Examples</h3>
+    <p><strong>Mode buffer:</strong> Returns file content as Node.js Buffer</p>
+    <p><strong>Mode base64:</strong> Returns file content as base64 encoded string</p>
+    <p><strong>Mode url:</strong> Returns only the file URL without downloading</p>
+</script>
