@@ -38,19 +38,20 @@ module.exports = (RED: NodeAPI) => {
                 }
                 if (!['buffer', 'base64', 'url'].includes(mode)) throw pbPropError('Mode (buffer|base64|url)');
 
+                let newHost = host ? String(host).trim() : '';
+                if (newHost) {
+                    if (!newHost.startsWith('http')) newHost = `https://${newHost}`;
+                    if (newHost.endsWith('/')) newHost = newHost.substring(0, newHost.length - 1);
+                }
+
                 const convertFile = (filename: string) => pbRetry(this, msg, async (pb) => {
                     const result: any = { filename };
                     let url = pb.files.getUrl({ collectionName: collection, id: recordId }, filename);
                     
-                    // Change host if specified
-                    if (host && host.trim()) {
-                        const urlObj = new URL(url);
-                        const newHost = host.startsWith('http') ? host : `https://${host}`;
-                        const newUrlObj = new URL(newHost);
-                        urlObj.protocol = newUrlObj.protocol;
-                        urlObj.hostname = newUrlObj.hostname;
-                        urlObj.port = newUrlObj.port;
-                        url = urlObj.toString();
+                    if (newHost) {
+                        url = url.replace(/https?:\/\/[^\/]+/, '');
+                        if (url[0] !== '/') url = '/' + url;
+                        url = newHost + url;
                     }
                     
                     result.url = url;
