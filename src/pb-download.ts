@@ -7,6 +7,7 @@ export interface PBDownloadNodeDef extends NodeDef {
     recordId: string;
     filename: string;
     fields: string;
+    host: string;
     mode: 'buffer' | 'base64' | 'url';
 }
 
@@ -21,13 +22,14 @@ module.exports = (RED: NodeAPI) => {
                 const recordId = def.recordId || msg.recordId || p.id;
                 const filename = def.filename || msg.filename || p.filename;
                 const fieldsValue = def.fields || msg.fields || '';
+                const host = def.host || msg.host || '';
                 const mode = def.mode || msg.mode || 'buffer';
 
                 const fields: string[] = (
                     Array.isArray(fieldsValue) ? fieldsValue :
                     isString(fieldsValue) ? fieldsValue.split(',') :
                     []
-                ).map(f => f.trim()).filter(f => f);
+                ).map((f: string) => f.trim()).filter((f: string) => f);
 
                 if (!isString(collection)) throw pbPropError('Collection');
                 if (!fields.length) {
@@ -38,17 +40,30 @@ module.exports = (RED: NodeAPI) => {
 
                 const convertFile = (filename: string) => pbRetry(this, msg, async (pb) => {
                     const result: any = { filename };
-                    const url = pb.files.getUrl({ collectionName: collection, id: recordId }, filename);
+                    let url = pb.files.getUrl({ collectionName: collection, id: recordId }, filename);
+                    
+                    // Change host if specified
+                    if (host && host.trim()) {
+                        const urlObj = new URL(url);
+                        const newHost = host.startsWith('http') ? host : `https://${host}`;
+                        const newUrlObj = new URL(newHost);
+                        urlObj.protocol = newUrlObj.protocol;
+                        urlObj.hostname = newUrlObj.hostname;
+                        urlObj.port = newUrlObj.port;
+                        url = urlObj.toString();
+                    }
+                    
                     result.url = url;
                     if (mode === 'buffer' || mode === 'base64') {
                         const response = await fetch(url);
                         if (!response.ok) throw new Error(`Download failed id:${recordId} filename:${filename}: ${response.status} ${response.statusText}`);
+                        const arrayBuffer = await response.arrayBuffer();
                         result.contentType = response.headers.get('content-type') || 'application/octet-stream';
                         if (mode === 'buffer') {
-                            result.buffer = Buffer.from(result.data);
+                            result.buffer = Buffer.from(arrayBuffer);
                         }
                         if (mode === 'base64') {
-                            const base64 = Buffer.from(result.data).toString('base64');
+                            const base64 = Buffer.from(arrayBuffer).toString('base64');
                             result.base64 = `data:${result.contentType};base64,${base64}`;
                         }
                     }

@@ -8,6 +8,7 @@
             recordId: { value: "" },
             filename: { value: "" },
             fields: { value: "" },
+            host: { value: "" },
             mode: { value: "buffer" }
         },
         inputs: 1,
@@ -42,6 +43,10 @@
         <input type="text" id="node-input-fields" placeholder="Comma-separated field names: avatar,photos,documents">
     </div>
     <div class="form-row">
+        <label for="node-input-host"><i class="icon-globe"></i> Host Override</label>
+        <input type="text" id="node-input-host" placeholder="cdn.example.com or https://cdn.example.com">
+    </div>
+    <div class="form-row">
         <label for="node-input-mode"><i class="icon-share"></i> Mode</label>
         <select id="node-input-mode">
             <option value="buffer">Buffer</option>
@@ -60,6 +65,7 @@
         <li><strong>Record ID:</strong> Default record ID (can be overridden by msg.recordId or payload.id)</li>
         <li><strong>Filename:</strong> Single file field name (can be overridden by msg.filename)</li>
         <li><strong>File Fields:</strong> Comma-separated field names for multiple files (can be overridden by msg.fields)</li>
+        <li><strong>Host Override:</strong> Replace host in file URLs (can be overridden by msg.host)</li>
         <li><strong>Mode:</strong> Download format: buffer, base64, or url only</li>
     </ul>
 
@@ -73,6 +79,8 @@
         <dd>Single file field name (used when fields is not specified)</dd>
         <dt>fields <span class="property-type">string</span></dt>
         <dd>Comma-separated field names for multiple files: "avatar,photos,documents"</dd>
+        <dt>host <span class="property-type">string</span></dt>
+        <dd>Override host for file URLs: "cdn.example.com" or "https://cdn.example.com"</dd>
         <dt>mode <span class="property-type">string</span></dt>
         <dd>Download mode: "buffer", "base64", or "url"</dd>
     </dl>
@@ -88,6 +96,7 @@
     <h3>Examples</h3>
     <p><strong>Single file:</strong> Use filename property, returns direct file content</p>
     <p><strong>Multiple files:</strong> Use fields "avatar,photos", returns {avatar: file1, photos: [file1, file2]}</p>
+    <p><strong>Host override:</strong> Change "localhost:8090" to "cdn.example.com" in URLs</p>
     <p><strong>Mode buffer:</strong> Returns file content as Node.js Buffer with metadata</p>
     <p><strong>Mode base64:</strong> Returns ready-to-use data URI with MIME type</p>
     <p><strong>Mode url:</strong> Returns only the file URL without downloading</p>
