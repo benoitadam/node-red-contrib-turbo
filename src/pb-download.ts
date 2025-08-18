@@ -44,13 +44,12 @@ module.exports = (RED: NodeAPI) => {
                     if (newHost.endsWith('/')) newHost = newHost.substring(0, newHost.length - 1);
                 }
 
-                const convertFile = (filename: string) => pbRetry(this, msg, async (pb) => {
+                const convertFile = (id: string, filename: string) => pbRetry(this, msg, async (pb) => {
                     const result: any = { filename };
-                    let url = pb.files.getUrl({ collectionName: collection, id: recordId }, filename);
+                    let url = pb.files.getUrl({ collectionName: collection, id }, filename);
                     
                     if (newHost) {
-                        result.newHost = newHost;
-                        result.originalUrl = url;
+                        result.localUrl = url;
                         const pathPart = url.replace(/https?:\/\/[^\/]+/, '');
                         url = pathPart.startsWith('/') ? newHost + pathPart : newHost + '/' + pathPart;
                     }
@@ -82,11 +81,11 @@ module.exports = (RED: NodeAPI) => {
                             if (Array.isArray(fieldValue)) {
                                 const files: any[] = [];
                                 for (const filename of fieldValue) {
-                                    files.push(await convertFile(filename));
+                                    files.push(await convertFile(record.id, filename));
                                 }
                                 record[field] = files;
                             } else {
-                                record[field] = await convertFile(fieldValue);
+                                record[field] = await convertFile(record.id, fieldValue);
                             }
                         }
                     }
@@ -105,7 +104,7 @@ module.exports = (RED: NodeAPI) => {
                     return;
                 }
 
-                msg.payload = await convertFile(filename);
+                msg.payload = await convertFile(recordId, filename);
                 this.send(msg);
             } catch (error) {
                 this.error(`PB Download failed: ${error}`, msg);
