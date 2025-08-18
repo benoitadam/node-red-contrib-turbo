@@ -8,7 +8,7 @@ export interface PBDownloadNodeDef extends NodeDef {
     filename: string;
     fields: string;
     host: string;
-    mode: 'buffer' | 'base64' | 'url';
+    mode: 'buffer' | 'base64' | 'url' | 'url+type';
 }
 
 module.exports = (RED: NodeAPI) => {
@@ -36,7 +36,7 @@ module.exports = (RED: NodeAPI) => {
                     if (!recordId) throw pbPropError('Fields Or Record ID');
                     if (!filename) throw pbPropError('Fields Or Filename');
                 }
-                if (!['buffer', 'base64', 'url'].includes(mode)) throw pbPropError('Mode (buffer|base64|url)');
+                if (!['buffer', 'base64', 'url', 'url+type'].includes(mode)) throw pbPropError('Mode (buffer|base64|url|url+type)');
 
                 let newHost = host ? String(host).trim() : '';
                 if (newHost) {
@@ -55,18 +55,20 @@ module.exports = (RED: NodeAPI) => {
                     }
                     
                     result.url = url;
-                    if (mode === 'buffer' || mode === 'base64') {
-                        const response = await fetch(url);
-                        if (!response.ok) throw new Error(`Download failed id:${recordId} filename:${filename}: ${response.status} ${response.statusText}`);
-                        const arrayBuffer = await response.arrayBuffer();
-                        result.contentType = response.headers.get('content-type') || 'application/octet-stream';
+                    if (mode === 'buffer' || mode === 'base64' || mode === 'url+type') {
+                        const response = await fetch(url, { method: mode === 'url+type' ? 'HEAD' : 'GET' });
+                        if (!response.ok) throw new Error(`Download failed id:${id} filename:${filename}: ${response.status} ${response.statusText}`);
+                        result.type = response.headers.get('content-type') || 'application/octet-stream';
+                        
                         if (mode === 'buffer') {
+                            const arrayBuffer = await response.arrayBuffer();
                             result.buffer = Buffer.from(arrayBuffer);
-                        }
-                        if (mode === 'base64') {
+                        } else if (mode === 'base64') {
+                            const arrayBuffer = await response.arrayBuffer();
                             const base64 = Buffer.from(arrayBuffer).toString('base64');
-                            result.base64 = `data:${result.contentType};base64,${base64}`;
+                            result.base64 = `data:${result.type};base64,${base64}`;
                         }
+                        // mode === 'url+type' : just keep url and type, no download
                     }
                     return result;
                 });

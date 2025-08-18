@@ -52,6 +52,7 @@
             <option value="buffer">Buffer</option>
             <option value="base64">Base64</option>
             <option value="url">URL only</option>
+            <option value="url+type">URL + Type</option>
         </select>
     </div>
 </script>
@@ -82,7 +83,7 @@
         <dt>host <span class="property-type">string</span></dt>
         <dd>Override host for file URLs: "cdn.example.com" or "https://cdn.example.com"</dd>
         <dt>mode <span class="property-type">string</span></dt>
-        <dd>Download mode: "buffer", "base64", or "url"</dd>
+        <dd>Download mode: "buffer", "base64", "url", or "url+type"</dd>
     </dl>
 
     <h3>Outputs</h3>
@@ -100,4 +101,5 @@
     <p><strong>Mode buffer:</strong> Returns file content as Node.js Buffer with metadata</p>
     <p><strong>Mode base64:</strong> Returns ready-to-use data URI with MIME type</p>
     <p><strong>Mode url:</strong> Returns only the file URL without downloading</p>
+    <p><strong>Mode url+type:</strong> Returns file URL with MIME type (HEAD request only)</p>
 </script>
