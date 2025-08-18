@@ -7,6 +7,7 @@
             collection: { value: "" },
             recordId: { value: "" },
             filename: { value: "" },
+            fields: { value: "" },
             mode: { value: "buffer" }
         },
         inputs: 1,
@@ -34,7 +35,11 @@
     </div>
     <div class="form-row">
         <label for="node-input-filename"><i class="icon-download"></i> Filename</label>
-        <input type="text" id="node-input-filename" placeholder="Filename or leave empty for msg.filename">
+        <input type="text" id="node-input-filename" placeholder="Single filename or leave empty for msg.filename">
+    </div>
+    <div class="form-row">
+        <label for="node-input-fields"><i class="icon-list"></i> File Fields</label>
+        <input type="text" id="node-input-fields" placeholder="Comma-separated field names: avatar,photos,documents">
     </div>
     <div class="form-row">
         <label for="node-input-mode"><i class="icon-share"></i> Mode</label>
@@ -53,7 +58,8 @@
     <ul>
         <li><strong>Collection:</strong> PocketBase collection name (can be overridden by msg.collection)</li>
         <li><strong>Record ID:</strong> Default record ID (can be overridden by msg.recordId or payload.id)</li>
-        <li><strong>Filename:</strong> File field name (can be overridden by msg.filename)</li>
+        <li><strong>Filename:</strong> Single file field name (can be overridden by msg.filename)</li>
+        <li><strong>File Fields:</strong> Comma-separated field names for multiple files (can be overridden by msg.fields)</li>
         <li><strong>Mode:</strong> Download format: buffer, base64, or url only</li>
     </ul>
 
@@ -64,21 +70,25 @@
         <dt>recordId <span class="property-type">string</span></dt>
         <dd>Record ID containing the file (required if not in config)</dd>
         <dt>filename <span class="property-type">string</span></dt>
-        <dd>File field name (required if not in config)</dd>
+        <dd>Single file field name (used when fields is not specified)</dd>
+        <dt>fields <span class="property-type">string</span></dt>
+        <dd>Comma-separated field names for multiple files: "avatar,photos,documents"</dd>
         <dt>mode <span class="property-type">string</span></dt>
         <dd>Download mode: "buffer", "base64", or "url"</dd>
     </dl>
 
     <h3>Outputs</h3>
     <dl class="message-properties">
-        <dt>payload <span class="property-type">buffer | string</span></dt>
-        <dd>Downloaded file as buffer, base64 string, or file URL depending on mode</dd>
+        <dt>payload <span class="property-type">buffer | string | object</span></dt>
+        <dd>Single file: buffer, base64 string, or file URL. Multiple files: object with field names as keys</dd>
         <dt>pb <span class="property-type">PocketBase</span></dt>
         <dd>Authenticated PocketBase client for chaining</dd>
     </dl>
 
     <h3>Examples</h3>
-    <p><strong>Mode buffer:</strong> Returns file content as Node.js Buffer</p>
-    <p><strong>Mode base64:</strong> Returns file content as base64 encoded string</p>
+    <p><strong>Single file:</strong> Use filename property, returns direct file content</p>
+    <p><strong>Multiple files:</strong> Use fields "avatar,photos", returns {avatar: file1, photos: [file1, file2]}</p>
+    <p><strong>Mode buffer:</strong> Returns file content as Node.js Buffer with metadata</p>
+    <p><strong>Mode base64:</strong> Returns ready-to-use data URI with MIME type</p>
     <p><strong>Mode url:</strong> Returns only the file URL without downloading</p>
 </script>

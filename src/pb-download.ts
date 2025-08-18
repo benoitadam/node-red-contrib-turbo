@@ -6,6 +6,7 @@ export interface PBDownloadNodeDef extends NodeDef {
     collection: string;
     recordId: string;
     filename: string;
+    fields: string;
     mode: 'buffer' | 'base64' | 'url';
 }
 
@@ -19,45 +20,76 @@ module.exports = (RED: NodeAPI) => {
                 const collection = def.collection || msg.collection || p.collectionName;
                 const recordId = def.recordId || msg.recordId || p.id;
                 const filename = def.filename || msg.filename || p.filename;
+                const fieldsValue = def.fields || msg.fields || '';
                 const mode = def.mode || msg.mode || 'buffer';
 
+                const fields: string[] = (
+                    Array.isArray(fieldsValue) ? fieldsValue :
+                    isString(fieldsValue) ? fieldsValue.split(',') :
+                    []
+                ).map(f => f.trim()).filter(f => f);
+
                 if (!isString(collection)) throw pbPropError('Collection');
-                if (!recordId) throw pbPropError('Record ID');
-                if (!filename) throw pbPropError('Filename');
+                if (!fields.length) {
+                    if (!recordId) throw pbPropError('Fields Or Record ID');
+                    if (!filename) throw pbPropError('Fields Or Filename');
+                }
                 if (!['buffer', 'base64', 'url'].includes(mode)) throw pbPropError('Mode (buffer|base64|url)');
 
-                this.debug(`PB Download: ${collection}/${recordId}/${filename} mode=${mode}`);
-
-                if (mode === 'url') {
-                    const result = await pbRetry(this, msg, async (pb) => {
-                        return pb.files.getUrl({ collectionName: collection, id: recordId }, filename);
-                    });
-                    
-                    msg.payload = result;
-                    this.send(msg);
-                } else {
-                    const result = await pbRetry(this, msg, async (pb) => {
-                        const response = await fetch(pb.files.getUrl({ collectionName: collection, id: recordId }, filename));
-                        if (!response.ok) {
-                            throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+                const convertFile = (filename: string) => pbRetry(this, msg, async (pb) => {
+                    const result: any = { filename };
+                    const url = pb.files.getUrl({ collectionName: collection, id: recordId }, filename);
+                    result.url = url;
+                    if (mode === 'buffer' || mode === 'base64') {
+                        const response = await fetch(url);
+                        if (!response.ok) throw new Error(`Download failed id:${recordId} filename:${filename}: ${response.status} ${response.statusText}`);
+                        result.contentType = response.headers.get('content-type') || 'application/octet-stream';
+                        if (mode === 'buffer') {
+                            result.buffer = Buffer.from(result.data);
                         }
-                        return { 
-                            data: await response.arrayBuffer(),
-                            contentType: response.headers.get('content-type') || 'application/octet-stream'
-                        };
-                    });
-
-                    if (mode === 'buffer') {
-                        msg.payload = Buffer.from(result.data);
-                        msg.contentType = result.contentType;
-                    } else if (mode === 'base64') {
-                        const base64 = Buffer.from(result.data).toString('base64');
-                        msg.payload = `data:${result.contentType};base64,${base64}`;
+                        if (mode === 'base64') {
+                            const base64 = Buffer.from(result.data).toString('base64');
+                            result.base64 = `data:${result.contentType};base64,${base64}`;
+                        }
                     }
-                    
+                    return result;
+                });
+
+                if (fields.length > 0) {
+                    this.debug(`PB Download: ${collection}/${recordId} fields=[${fields.join(',')}] mode=${mode}`);
+
+                    const convertFields = async (record: any) => {
+                        for (const field of fields) {
+                            if (!record[field]) continue;
+                            const fieldValue = record[field];
+                            if (Array.isArray(fieldValue)) {
+                                const files: any[] = [];
+                                for (const filename of fieldValue) {
+                                    files.push(await convertFile(filename));
+                                }
+                                record[field] = files;
+                            } else {
+                                record[field] = await convertFile(fieldValue);
+                            }
+                        }
+                    }
+
+                    const payload = msg.payload;
+
+                    if (Array.isArray(payload)) {
+                        for (const record of payload) {
+                            await convertFields(record);
+                        }
+                    } else {
+                        await convertFields(payload);
+                    }
+
                     this.send(msg);
+                    return;
                 }
 
+                msg.payload = await convertFile(filename);
+                this.send(msg);
             } catch (error) {
                 this.error(`PB Download failed: ${error}`, msg);
             }
