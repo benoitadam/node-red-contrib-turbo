@@ -49,9 +49,10 @@ module.exports = (RED: NodeAPI) => {
                     let url = pb.files.getUrl({ collectionName: collection, id: recordId }, filename);
                     
                     if (newHost) {
-                        url = url.replace(/https?:\/\/[^\/]+/, '');
-                        if (url[0] !== '/') url = '/' + url;
-                        url = newHost + url;
+                        result.newHost = newHost;
+                        result.originalUrl = url;
+                        const pathPart = url.replace(/https?:\/\/[^\/]+/, '');
+                        url = pathPart.startsWith('/') ? newHost + pathPart : newHost + '/' + pathPart;
                     }
                     
                     result.url = url;
