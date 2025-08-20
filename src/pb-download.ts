@@ -17,13 +17,16 @@ module.exports = (RED: NodeAPI) => {
 
         this.on('input', async (msg: any) => {
             try {
-                const p = msg.payload || {};
-                const collection = def.collection || msg.collection || p.collectionName;
-                const recordId = def.recordId || msg.recordId || p.id;
-                const filename = def.filename || msg.filename || p.filename;
+                const record = msg.record || msg.payload;
+                const collection = def.collection || msg.collection || record.collectionName;
+                const id = def.recordId || msg.recordId || record.id;
+                const filename = def.filename || msg.filename || record.file;
                 const fieldsValue = def.fields || msg.fields || '';
                 const host = def.host || msg.host || '';
                 const mode = def.mode || msg.mode || 'buffer';
+
+                msg.collection = collection;
+                msg.recordId = id;
 
                 const fields: string[] = (
                     Array.isArray(fieldsValue) ? fieldsValue :
@@ -33,7 +36,7 @@ module.exports = (RED: NodeAPI) => {
 
                 if (!isString(collection)) throw pbPropError('Collection');
                 if (!fields.length) {
-                    if (!recordId) throw pbPropError('Fields Or Record ID');
+                    if (!id) throw pbPropError('Fields Or Record ID');
                     if (!filename) throw pbPropError('Fields Or Filename');
                 }
                 if (!['buffer', 'base64', 'url', 'url+type'].includes(mode)) throw pbPropError('Mode (buffer|base64|url|url+type)');
@@ -74,7 +77,7 @@ module.exports = (RED: NodeAPI) => {
                 });
 
                 if (fields.length > 0) {
-                    this.debug(`PB Download: ${collection}/${recordId} fields=[${fields.join(',')}] mode=${mode}`);
+                    this.debug(`PB Download: ${collection}/${id} fields=[${fields.join(',')}] mode=${mode}`);
 
                     const convertFields = async (record: any) => {
                         for (const field of fields) {
@@ -106,7 +109,7 @@ module.exports = (RED: NodeAPI) => {
                     return;
                 }
 
-                msg.payload = await convertFile(recordId, filename);
+                msg.payload = await convertFile(id, filename);
                 this.send(msg);
             } catch (error) {
                 this.error(`PB Download failed: ${error}`, msg);

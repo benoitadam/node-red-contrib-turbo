@@ -24,7 +24,8 @@ module.exports = (RED: NodeAPI) => {
                     }
                 }
                 
-                const collection = def.collection || msg.collection || '';
+                const record = msg.record || msg.payload;
+                const collection = def.collection || msg.collection || record.collectionName;
                 const expand = def.expand || msg.expand || '';
 
                 if (!isString(collection)) throw pbPropError('Collection');

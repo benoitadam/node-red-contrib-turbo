@@ -15,9 +15,13 @@ module.exports = (RED: NodeAPI) => {
 
         this.on('input', async (msg: any) => {
             try {
-                const collection = def.collection || msg.collection;
-                const id = def.recordId || msg.recordId;
+                const record = msg.record || msg.payload;
+                const collection = def.collection || msg.collection || record.collectionName;
+                const id = def.recordId || msg.recordId || record.id;
                 const expand = def.expand || msg.expand || '';
+
+                msg.collection = collection;
+                msg.recordId = id;
 
                 let data = msg.payload;
                 if (def.json && def.json.trim()) {

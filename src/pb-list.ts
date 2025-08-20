@@ -18,14 +18,16 @@ module.exports = (RED: NodeAPI) => {
 
         this.on('input', async (msg: any) => {
             try {
-
-                const collection = def.collection || msg.collection;
+                const record = msg.record || msg.payload;
+                const collection = def.collection || msg.collection || record.collectionName;
                 const page = Number(def.page || msg.page || 1);
                 const perPage = Number(def.perPage || msg.perPage || 50);
                 const filter = def.filter || msg.filter || '';
                 const sort = def.sort || msg.sort || '';
                 const expand = def.expand || msg.expand || '';
                 const mode = def.mode || msg.mode || 'page';
+
+                msg.collection = collection;
 
                 if (!isString(collection)) throw pbPropError('Collection');
                 if (mode !== 'first') {
@@ -46,7 +48,9 @@ module.exports = (RED: NodeAPI) => {
                             expand
                         });
                     });
-                    msg.payload = result.items[0] || null;
+                    const record = result.items[0] || null;
+                    msg.payload = record
+                    msg.recordId = record && record.id;
                     this.send(msg);
                 } else {
                     const result = await pbRetry(this, msg, async (pb) => {
@@ -64,9 +68,10 @@ module.exports = (RED: NodeAPI) => {
                         msg.payload = result.items;
                         this.send(msg);
                     } else if (mode === 'split') {
-                        result.items.forEach((item) => {
+                        result.items.forEach((record) => {
                             const newMsg = RED.util.cloneMessage(msg);
-                            newMsg.payload = item;
+                            newMsg.payload = record;
+                            newMsg.recordId = record.id;
                             this.send(newMsg);
                         });
                     }

@@ -14,10 +14,12 @@ module.exports = (RED: NodeAPI) => {
 
         this.on('input', async (msg: any) => {
             try {
-                const p = msg.payload || {};
-                const collection = def.collection || msg.collection || p.collectionName;
-                const id = def.recordId || msg.recordId || p.id;
+                const record = msg.record || msg.payload;
+                const collection = def.collection || msg.collection || record.collectionName;
+                const id = def.recordId || msg.recordId || record.id;
                 const expand = def.expand || msg.expand || '';
+
+                msg.collection = collection;
 
                 if (!isString(collection)) throw pbPropError('Collection');
                 if (!id) throw pbPropError('Record ID');
