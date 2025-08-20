@@ -30,48 +30,66 @@ Inject → pb-auth → pb-list → Debug
 
 ### File Upload (pb-create / pb-update)
 
-Upload files by providing Buffer data in your payload:
+Upload files by providing file data in your payload:
 
 ```javascript
-// Single file upload
+// Direct Buffer
 msg.payload = {
     name: "My Document", 
-    file: msg.payload  // Direct Buffer
+    file: buffer  // Direct Buffer
 };
 
-// Single file with metadata
+// File object with Buffer
 msg.payload = {
     name: "My Document",
     file: {
-        buffer: msg.payload,      // Buffer data
-        filename: "document.pdf", // Original filename
-        mimetype: "application/pdf" // MIME type
+        file: {
+            buffer: buffer,           // Buffer data
+            name: "document.pdf",     // Filename
+            type: "application/pdf"   // MIME type
+        }
     }
 };
 
-// Multiple files upload
+// File object with URL (auto-downloads)
 msg.payload = {
-    name: "Photo Gallery",
-    photos: [                     // Array for multiple files
-        { 
-            buffer: buffer1, 
-            filename: "photo1.jpg", 
-            mimetype: "image/jpeg" 
-        },
-        { 
-            buffer: buffer2, 
-            filename: "photo2.png", 
-            mimetype: "image/png" 
+    name: "My Document",
+    file: {
+        file: {
+            url: "https://example.com/file.pdf",
+            name: "document.pdf",     // Optional: override filename
+            type: "application/pdf"   // Optional: override MIME type
         }
+    }
+};
+
+// File object with base64
+msg.payload = {
+    name: "My Document",
+    file: {
+        file: {
+            base64: "iVBORw0KGgoAAAA...",
+            name: "image.png",
+            type: "image/png"
+        }
+    }
+};
+
+// Multiple files (arrays supported)
+msg.payload = {
+    name: "Gallery",
+    photos: [
+        buffer1,  // Direct Buffer
+        { file: { url: "https://example.com/photo.jpg" } },  // URL
+        { file: { base64: "...", name: "photo.png" } }       // base64
     ]
 };
-return msg;
 ```
 
 **Supported formats:**
-- **Single file**: Direct Buffer or `{ buffer, filename, mimetype }`
-- **Multiple files**: Array of Buffer objects or metadata objects
-- Automatic indexing for unnamed files: `source_0`, `source_1`, etc.
+- **Direct**: Buffer, File object
+- **File object**: `{ file: { buffer/url/base64, name?, type? } }`
+- **Arrays**: Mixed arrays of any supported format
 
 ### File Download (pb-download)
 
