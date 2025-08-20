@@ -26,6 +26,39 @@ npm run build
 Inject → pb-auth → pb-list → Debug
 ```
 
+### Smart Parameter Resolution
+
+All nodes automatically extract collection and record ID from multiple sources with fallback logic:
+
+```javascript
+// Method 1: Explicit parameters
+msg.collection = "users";
+msg.recordId = "abc123";
+
+// Method 2: PocketBase record (auto-extracted)
+msg.payload = {
+  id: "abc123",
+  collectionName: "users",
+  name: "John Doe",
+  email: "john@example.com"
+};
+
+// Method 3: Separate record object
+msg.record = pbRecord;  // PocketBase record
+msg.payload = newData;  // Data for operations
+```
+
+**Resolution priority:**
+1. Node configuration
+2. `msg.collection` / `msg.recordId`
+3. `record.collectionName` / `record.id` (auto-extracted)
+
+**Chaining benefits:**
+```
+pb-get → pb-update → pb-delete
+```
+Collection and ID automatically propagate through `msg.collection` and `msg.recordId`.
+
 ## File Upload & Download
 
 ### File Upload (pb-create / pb-update)
@@ -93,25 +126,44 @@ msg.payload = {
 
 ### File Download (pb-download)
 
-Download files from PocketBase records:
+Download files from PocketBase records with automatic parameter resolution:
 
 ```javascript
-// Download configuration
+// Method 1: Explicit parameters
 msg.collection = "documents";
 msg.recordId = "abc123"; 
-msg.filename = "attachment.pdf";
-msg.mode = "buffer"; // "buffer", "base64", or "url"
-return msg;
+msg.filename = "attachment";
+msg.mode = "buffer";
+
+// Method 2: Auto-extract from record
+msg.payload = {
+  id: "abc123",
+  collectionName: "documents",
+  attachment: "file1.pdf",
+  photos: ["img1.jpg", "img2.png"]
+};
+// Auto-extracts: collection="documents", recordId="abc123", filename="attachment"
+
+// Method 3: Multiple files with fields
+msg.fields = "attachment,photos";  // Download specific file fields
+msg.host = "cdn.example.com";     // Override URL host
 ```
 
 **Download modes:**
-- **`buffer`**: Returns file content as Node.js Buffer
-- **`base64`**: Returns file content as base64 encoded string  
+- **`buffer`**: Returns file content as Node.js Buffer with metadata
+- **`base64`**: Returns ready-to-use data URI with MIME type
 - **`url`**: Returns only the file URL (no download)
+- **`url+type`**: Returns file URL with MIME type (HEAD request only)
 
-**Example flow:**
+**Smart filename detection:**
+1. `msg.filename` or node config
+2. `record.file` (single file field name)
+3. `msg.fields` (comma-separated multiple fields)
+
+**Example flows:**
 ```
-Inject → pb-auth → pb-download → Function → File Out
+pb-get → pb-download → File Out        # Auto-chaining
+pb-list → pb-download → Function       # Batch download
 ```
 
 ## ✅ Status
