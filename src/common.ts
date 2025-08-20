@@ -53,14 +53,14 @@ const getFile = async (v: any): Promise<any> => {
 
     if (f instanceof File) return f;
 
-    let { url, name, buffer, base64, type } = v;
+    let { url, name, buffer, base64, type } = v.file;
 
     if (!buffer) {
         if (base64) {
             buffer = Buffer.from(base64, 'base64');
         }
         else if (url) {
-            const response = await fetch(v.url);
+            const response = await fetch(url);
             if (!response.ok) throw new Error(`Failed to download "${url}": ${response.status}`);
             buffer = await response.arrayBuffer();
         }
