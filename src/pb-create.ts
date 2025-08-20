@@ -30,7 +30,7 @@ module.exports = (RED: NodeAPI) => {
                 if (!isString(collection)) throw pbPropError('Collection');
                 if (!isObject(data)) throw pbPropError('Record data');
 
-                data = pbData(data);
+                data = await pbData(data);
 
                 this.debug(`PB Create: ${collection} expand='${expand}'`);
 

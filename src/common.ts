@@ -12,30 +12,78 @@ export interface PBInfo {
     token?: string;
 }
 
-export const isObject = <T extends {}>(v: unknown): v is T => typeof v === "object" && v !== null;
+export const isObject = <T extends {} = any>(v: unknown): v is T => typeof v === "object" && v !== null;
 export const isString = (v: any): v is string => typeof v === 'string';
 export const isSafeNumber = (v: any): v is number => typeof v === 'number' && !Number.isNaN(v);
 const isBool = (v: any): v is boolean => v === true || v === false;
 
-export const pbData = (data: any): any => {
+type FileValue = {
+    file: {
+        url?: string;
+        base64?: string;
+        buffer?: Buffer;
+        name?: string;
+        type?: string;
+    }
+}|File|Buffer;
+
+const isFile = (v: any): v is FileValue => (
+    isObject<FileValue>(v) &&
+    (
+        v instanceof File ||
+        Buffer.isBuffer(v) ||
+        (
+            isObject(v.file) &&
+            (
+                isString(v.file.url) ||
+                isString(v.file.base64) ||
+                Buffer.isBuffer(v.file.buffer)
+            )
+        )
+    )
+);
+
+const getFile = async (v: any): Promise<any> => {
+    if (v instanceof File) return v;
+    if (Buffer.isBuffer(v)) {
+        return new File([new Uint8Array(v)], 'file');
+    }
+        
+    const f = v.file;
+
+    if (f instanceof File) return f;
+
+    let { url, name, buffer, base64, type } = v;
+
+    if (!buffer) {
+        if (base64) {
+            buffer = Buffer.from(base64, 'base64');
+        }
+        else if (url) {
+            const response = await fetch(v.url);
+            if (!response.ok) throw new Error(`Failed to download "${url}": ${response.status}`);
+            buffer = await response.arrayBuffer();
+        }
+    }
+    
+    return new File([new Uint8Array(buffer)], name||'file', { type });
+}
+
+export const pbData = async (data: any): Promise<any> => {
     if (!isObject(data)) throw pbPropError('data');
     
     const result: Record<string, any> = { ...data };
     
     for (const [k, v] of Object.entries(result)) {
-        if (v && v.buffer && Buffer.isBuffer(v.buffer)) {
-            const name = v.name || v.filename || `source`;
-            const type = v.type || v.mimetype || 'application/octet-stream';
-            result[k] = new File([new Uint8Array(v.buffer)], name, { type });
-        } else if (Array.isArray(v)) {
-            result[k] = v.map((item, index) => {
-                if (item && item.buffer && Buffer.isBuffer(item.buffer)) {
-                    const name = item.name || item.filename || `source_${index}`;
-                    const type = item.type ||item.mimetype || 'application/octet-stream';
-                    return new File([new Uint8Array(item.buffer)], name, { type });
+        if (Array.isArray(v)) {
+            for (let i = 0, l=v.length; i < l; i++) {
+                if (isFile(v[i])) {
+                    v[i] = await getFile(v[i]);
                 }
-                return item;
-            });
+            }
+        }
+        else if (isFile(v)) {
+            result[k] = await getFile(v);
         }
     }
     
