@@ -108,21 +108,40 @@ msg.payload = {
     }
 };
 
+// File object with local path
+msg.payload = {
+    name: "My Document",
+    file: {
+        file: {
+            path: "/path/to/local/file.pdf",
+            name: "document.pdf",        // Optional: override filename
+            type: "application/pdf"      // Optional: override MIME type
+        }
+    }
+};
+
 // Multiple files (arrays supported)
 msg.payload = {
     name: "Gallery",
     photos: [
         buffer1,  // Direct Buffer
-        { file: { url: "https://example.com/photo.jpg" } },  // URL
-        { file: { base64: "...", name: "photo.png" } }       // base64
+        { file: { url: "https://example.com/photo.jpg" } },      // URL
+        { file: { base64: "...", name: "photo.png" } },         // base64
+        { file: { path: "/local/image.jpg", name: "local.jpg" } } // Local file
     ]
 };
 ```
 
 **Supported formats:**
-- **Direct**: Buffer, File object
-- **File object**: `{ file: { buffer/url/base64, name?, type? } }`
+- **Direct**: Buffer, File object, ArrayBuffer
+- **File object**: `{ file: { buffer/url/base64/path, name?, type? } }`
 - **Arrays**: Mixed arrays of any supported format
+
+**File sources:**
+- **buffer**: Direct Buffer or ArrayBuffer data
+- **url**: HTTP/HTTPS URL (auto-downloaded)
+- **base64**: Base64 encoded string data
+- **path**: Local filesystem path (Node.js only)
 
 ### File Download (pb-download)
 

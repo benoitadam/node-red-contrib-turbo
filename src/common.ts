@@ -17,15 +17,17 @@ export const isString = (v: any): v is string => typeof v === 'string';
 export const isSafeNumber = (v: any): v is number => typeof v === 'number' && !Number.isNaN(v);
 const isBool = (v: any): v is boolean => v === true || v === false;
 
-type FileValue = {
+interface FileObject {
     file: {
         url?: string;
         base64?: string;
-        buffer?: Buffer;
+        buffer?: Buffer | ArrayBuffer;
+        path?: string;
         name?: string;
         type?: string;
     }
-}|File|Buffer;
+}
+type FileValue = FileObject | File | Buffer | ArrayBuffer;
 
 const isFile = (v: any): v is FileValue => (
     isObject<FileValue>(v) &&
@@ -33,27 +35,28 @@ const isFile = (v: any): v is FileValue => (
         v instanceof File ||
         Buffer.isBuffer(v) ||
         (
-            isObject(v.file) &&
+            isObject<FileObject>((v as FileObject).file) &&
             (
-                isString(v.file.url) ||
-                isString(v.file.base64) ||
-                Buffer.isBuffer(v.file.buffer)
+                isString((v as FileObject).file.url) ||
+                isString((v as FileObject).file.base64) ||
+                isString((v as FileObject).file.path) ||
+                Buffer.isBuffer((v as FileObject).file.buffer)
             )
         )
     )
 );
 
-const getFile = async (v: any): Promise<any> => {
+const getFile = async (v: FileValue, index: number): Promise<File> => {
     if (v instanceof File) return v;
     if (Buffer.isBuffer(v)) {
         return new File([new Uint8Array(v)], 'file');
     }
         
-    const f = v.file;
+    const f = (v as FileObject).file;
 
     if (f instanceof File) return f;
 
-    let { url, name, buffer, base64, type } = v.file;
+    let { url, name, buffer, base64, path, type } = f;
 
     if (!buffer) {
         if (base64) {
@@ -64,9 +67,17 @@ const getFile = async (v: any): Promise<any> => {
             if (!response.ok) throw new Error(`Failed to download "${url}": ${response.status}`);
             buffer = await response.arrayBuffer();
         }
+        else if (path) {
+            const fs = require('fs').promises;
+            buffer = await fs.readFile(path);
+        }
     }
-    
-    return new File([new Uint8Array(buffer)], name||'file', { type });
+
+    if (!buffer) throw new Error('file no buffer');
+
+    if (!name) name = `f${index}`;
+
+    return new File([new Uint8Array(buffer)], name, { type });
 }
 
 export const pbData = async (data: any): Promise<any> => {
@@ -78,12 +89,12 @@ export const pbData = async (data: any): Promise<any> => {
         if (Array.isArray(v)) {
             for (let i = 0, l=v.length; i < l; i++) {
                 if (isFile(v[i])) {
-                    v[i] = await getFile(v[i]);
+                    v[i] = await getFile(v[i], i);
                 }
             }
         }
         else if (isFile(v)) {
-            result[k] = await getFile(v);
+            result[k] = await getFile(v, 0);
         }
     }
     
