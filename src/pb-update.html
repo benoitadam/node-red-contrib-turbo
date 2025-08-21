@@ -14,7 +14,18 @@
         icon: "pocketbase.svg",
         paletteLabel: 'update',
         label: function() {
-            return this.name || `update ${this.collection || ''}`;
+            if (this.name) return this.name;
+            if (this.json) {
+                try {
+                    var info = JSON.stringify(JSON.parse(this.json));
+                    if (info.length > 20) info = info.substring(0, 17) + '...';
+                    return `update ${info}`
+                }
+                catch (e) {
+                    return 'update error json';
+                }
+            }
+            return `update ${this.collection || ''}`;
         }
     });
 </script>
