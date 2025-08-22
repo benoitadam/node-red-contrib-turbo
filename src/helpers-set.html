@@ -18,14 +18,15 @@
             const target = this.target || "payload";
             const mode = this.mode || "path";
             if (mode === 'path') {
-                if (!this.source || this.source === "payload") {
-                    return `set ${target}`;
-                }
+                const source = this.source || "payload";
+                if (source === "payload") return `set ${target}`;
+                if (target === "payload") return `get ${source}`;
                 return `${target} ← ${this.source || "payload"}`;
             }
             const content = this.content || "";
-            const preview = content.length > 10 ? content.substring(0, 10) + "..." : content || "{}";
-            return `${target} ← ${preview}`;
+            const preview = content.length > 20 ? content.substring(0, 20) + "..." : content;
+            if (target === "payload") return `← ${preview}`;
+            return `${target} ← ${preview||''}`;
         },
         oneditprepare: function() {
             var that = this;

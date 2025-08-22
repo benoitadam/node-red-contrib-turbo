@@ -83,7 +83,7 @@ export const setPath = (obj: any, path: string, value: any): any => {
  for (let i = 0; i < lastIndex; i++) {
    const prop = parts[i];
    const nextProp = parts[i + 1];
-   const isNextArray = /^\d+$/.test(nextProp);
+   const isNextArray = /^-?\d+$/.test(nextProp); // Support negative indices
    
    if (current[prop] == null) {
      current[prop] = isNextArray ? [] : {};
@@ -100,7 +100,12 @@ export const setPath = (obj: any, path: string, value: any): any => {
    const index = parseInt(finalProp, 10);
    if (!Number.isNaN(index)) {
      if (index < 0) {
-       current[current.length + index] = value;
+       const actualIndex = current.length + index;
+       if (actualIndex >= 0) {
+         current[actualIndex] = value;
+       } else {
+         current[0] = value;
+       }
      } else {
        // Extend array if needed
        while (current.length <= index) {

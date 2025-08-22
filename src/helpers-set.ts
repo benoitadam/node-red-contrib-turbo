@@ -16,34 +16,27 @@ module.exports = (RED: NodeAPI) => {
         this.on('input', (msg: any) => {
             const target = def.target || 'payload';
             const source = def.source || 'payload';
-            const content = def.content || '';
             const mode = def.mode || 'path';
+            const content = def.content;
 
             try {
-                let value: any = undefined;
+                let value: any = '';
 
                 switch (mode) {
                     case 'path':
                         value = getPath(msg, source);
                         break;
                     case 'json':
-                        if (content) {
-                            value = JSON.parse(content);
-                        }
+                        if (content) value = JSON.parse(content);
                         break;
                     case 'text':
                         value = content;
                         break;
                     case 'jsonTemplate':
-                        if (content) {
-                            const renderedJsonTemplate = setTemplate(content, msg);
-                            value = JSON.parse(renderedJsonTemplate);
-                        }
+                        if (content) value = JSON.parse(setTemplate(content, msg));
                         break;
                     case 'textTemplate':
-                        if (content) {
-                            value = setTemplate(content, msg);
-                        }
+                        if (content) value = setTemplate(content, msg);
                         break;
                     default:
                         this.error(`Unsupported mode: ${mode}`);
