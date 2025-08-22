@@ -116,10 +116,10 @@ export const setPath = (obj: any, path: string, value: any): any => {
  return obj;
 };
 
-// export const setTemplate = (template: string, obj: any): string => {
-//   return template.replace(/\{\{(\w+)\}\}/g, (_, path) => {
-//     const value = getPath(obj, path);
-//     if (typeof value === 'string' || typeof value === 'number') return value;
-//     return value;
-//   });
-// }
+export const setTemplate = (template: string, obj: any): string => {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, path) => {
+    const value = getPath(obj, path);
+    if (typeof value === 'string' || typeof value === 'number') return value;
+    return value;
+  });
+}

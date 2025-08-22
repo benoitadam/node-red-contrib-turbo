@@ -1,6 +1,6 @@
 # Node-RED Contrib Helpers
 
-Un ensemble d'outils utilitaires pour Node-RED qui simplifient les t�ches courantes de manipulation de messages.
+Un ensemble d'outils utilitaires pour Node-RED qui simplifient les tâches courantes de manipulation de messages et d'assignation de valeurs.
 
 ## Installation
 
@@ -8,20 +8,61 @@ Un ensemble d'outils utilitaires pour Node-RED qui simplifient les t�ches cour
 npm install node-red-contrib-helpers
 ```
 
-## NSuds disponibles
+## Nœuds disponibles
 
 ### helpers-get-set
 
-Extrait une propri�t� d'un message � partir d'un chemin et la place dans le payload ou dans une autre propri�t�.
+Nœud polyvalent qui permet d'extraire des propriétés d'un message ou d'assigner des valeurs statiques selon le type de source choisi.
 
-**Param�tres :**
-- **Source Path**: Chemin vers la propri�t� source (ex: `msg.a.b.c`)
-- **Target Path**: Chemin vers la destination (ex: `msg.payload` ou `msg.b.c[5].a`)
+#### Configuration
 
-**Exemple d'utilisation :**
-- Source: `msg.data.user.name`
-- Target: `msg.payload`
-- R�sultat: La valeur de `msg.data.user.name` sera copi�e dans `msg.payload`
+- **Target Path**: Chemin de destination (ex: `payload`, `result[0].value`)
+- **Source Type**: Type de source de données
+- **Source Path**: Chemin source (visible pour Message Path)
+- **Content**: Valeur statique (visible pour JSON/Text Value)
+
+#### Types de Source
+
+| Type | Description | Interface | Exemple |
+|------|-------------|-----------|---------|
+| **Message Path** | Extrait une valeur depuis un chemin du message | Champ Source Path | `payload.user.name`, `data.items[0]` |
+| **JSON Value** | JSON statique parsé automatiquement | Éditeur Monaco JSON | `{"key": "value", "array": [1, 2, 3]}` |
+| **Text Value** | Texte statique sans traitement | Éditeur Monaco texte | `Hello World`, `Configuration complete` |
+
+#### Exemples d'utilisation
+
+**Extraction depuis un chemin :**
+```
+Target: payload
+Source Type: Message Path
+Source Path: data.user.name
+→ Copie msg.data.user.name vers msg.payload
+```
+
+**Assignation JSON statique :**
+```
+Target: config
+Source Type: JSON Value
+Content: {"enabled": true, "retries": 3, "timeout": 5000}
+→ Assigne l'objet JSON à msg.config
+```
+
+**Assignation de texte :**
+```
+Target: status
+Source Type: Text Value
+Content: Processing completed successfully
+→ Assigne la chaîne à msg.status
+```
+
+#### Fonctionnalités
+
+- ✅ Interface conditionnelle selon le type de source sélectionné
+- ✅ Éditeur Monaco avec coloration syntaxique (JSON/texte)
+- ✅ Support des chemins imbriqués et indices de tableau
+- ✅ Parsing automatique JSON vers objet JavaScript
+- ✅ Gestion d'erreurs avec messages détaillés
+- ✅ Validation du contenu requis pour les types statiques
 
 ## Licence
 

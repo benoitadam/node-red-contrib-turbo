@@ -4,14 +4,15 @@
         color: '#87CEEB',
         defaults: {
             name: { value: "" },
-            source: { value: "payload" },
-            target: { value: "payload" },
-            value: { value: "" }
+            source: { value: "" },
+            target: { value: "" },
+            content: { value: "" },
+            mode: { value: "" }
         },
         inputs: 1,
         outputs: 1,
         icon: "font-awesome/fa-pencil",
-        paletteLabel: 'get set',
+        paletteLabel: 'get-set',
         label: function() {
             if (this.name) return this.name;
             const source = this.source || "payload";
@@ -19,6 +20,78 @@
             if (target === 'payload') return `get ${source}`;
             if (source === 'payload') return `set ${target}`;
             return `${source} → ${target}`;
+        },
+        oneditprepare: function() {
+            var that = this;
+            
+            function updateEditor() {
+                var mode = $("#node-input-mode").val();
+                var mode = 'ace/mode/text';
+                var tips = '';
+                
+                // Show/hide fields based on source type
+                if (mode === 'path') {
+                    $(".source-path-row").show();
+                    $(".content-editor-row").hide();
+                } else {
+                    $(".source-path-row").hide();
+                    $(".content-editor-row").show();
+                    
+                    switch(mode) {
+                        case 'json':
+                            mode = 'ace/mode/json';
+                            tips = 'JSON valide (ex: {"key": "value", "array": [1, 2, 3]})';
+                            break;
+                        case 'jsonTemplate':
+                            mode = 'ace/mode/json';
+                            tips = 'JSON valide (ex: {"key": "value", "array": [1, 2, 3]})';
+                            break;
+                        case 'text':
+                            mode = 'ace/mode/text';
+                            tips = 'Texte brut sans traitement';
+                            break;
+                        case 'textTemplate':
+                            mode = 'ace/mode/text';
+                            tips = 'Texte brut sans traitement';
+                            break;
+                    }
+                    
+                    $("#content-tips").text(tips);
+                    
+                    if (that.editor) {
+                        that.editor.getSession().setMode(mode);
+                    }
+                }
+            }
+            
+            this.editor = RED.editor.createEditor({
+                id: 'node-input-content-editor',
+                mode: 'ace/mode/json',
+                value: $("#node-input-content").val() || ""
+            });
+            
+            $("#node-input-mode").change(updateEditor);
+            updateEditor();
+        },
+        oneditsave: function() {
+            $("#node-input-content").val(this.editor.getValue());
+            this.editor.destroy();
+            delete this.editor;
+        },
+        oneditcancel: function() {
+            this.editor.destroy();
+            delete this.editor;
+        },
+        oneditresize: function(size) {
+            var rows = $("#dialog-form>div:not(.node-text-editor-row)");
+            var height = $("#dialog-form").height();
+            for (var i=0; i<rows.length; i++) {
+                height -= $(rows[i]).outerHeight(true);
+            }
+            var editorRow = $("#dialog-form>div.node-text-editor-row");
+            height -= (parseInt(editorRow.css("marginTop"))+parseInt(editorRow.css("marginBottom")));
+            $(".node-text-editor").css("height",height+"px");
+            this.editor.resize();
         }
     });
 </script>
@@ -34,48 +107,88 @@
         <div class="form-tips">Chemin destination (ex: msg.users[5].name)</div>
     </div>
     <div class="form-row">
+        <label for="node-input-mode"><i class="icon-cog"></i> Source Type</label>
+        <select id="node-input-mode" style="width:70%;">
+            <option value="path">Path</option>
+            <option value="json">JSON</option>
+            <option value="text">Text Value</option>
+            <option value="jsonTemplate">JSON Template</option>
+            <option value="textTemplate">Text Template</option>
+        </select>
+    </div>
+    <div class="form-row source-path-row">
         <label for="node-input-source"><i class="icon-arrow-right"></i> Source Path</label>
         <input type="text" id="node-input-source" placeholder="payload">
         <div class="form-tips">Chemin source (ex: data.user.name)</div>
     </div>
-    <div class="form-row">
-        <label for="node-input-value"><i class="icon-edit"></i> Value</label>
-        <input type="text" id="node-input-value" placeholder='{"name": "{{user.name}}"}'>
-        <div class="form-tips">Valeur JSON, string ou nombre à assigner (optionnel, priorité sur Source Path)</div>
+    <div class="form-row content-editor-row" style="margin-bottom:0px;">
+        <label for="node-input-content"><i class="icon-edit"></i> Content</label>
+        <input type="hidden" id="node-input-content">
+    </div>
+    <div class="form-row node-text-editor-row content-editor-row">
+        <div style="height: 150px; min-height:100px;" class="node-text-editor" id="node-input-content-editor"></div>
+        <div class="form-tips" id="content-tips">JSON valide (ex: {"key": "value", "array": [1, 2, 3]})</div>
     </div>
 </script>
 
 <script type="text/html" data-help-name="helpers-get-set">
-    <p>Extrait une propriété d'un message à partir d'un chemin et la place dans le payload ou dans une autre propriété.</p>
+    <p>Nœud polyvalent qui permet d'extraire des propriétés d'un message ou d'assigner des valeurs statiques selon le type de source choisi.</p>
     
     <h3>Configuration</h3>
     <ul>
-        <li><strong>Target Path:</strong> Chemin vers la destination (ex: msg.result[0].value)</li>
-        <li><strong>Source Path:</strong> Chemin vers la propriété source (ex: msg.a.b.c)</li>
+        <li><strong>Target Path:</strong> Chemin de destination (ex: <code>payload</code>, <code>result[0].value</code>)</li>
+        <li><strong>Source Type:</strong> Type de source de données</li>
+        <li><strong>Source Path:</strong> Chemin source (visible pour Message Path)</li>
+        <li><strong>Content:</strong> Valeur statique (visible pour JSON/Text Value)</li>
     </ul>
+
+    <h3>Types de Source</h3>
+    <dl class="message-properties">
+        <dt>Message Path <span class="property-type">path</span></dt>
+        <dd>Extrait une valeur depuis un chemin du message. Ex: <code>payload.user.name</code>, <code>data.items[0]</code></dd>
+        
+        <dt>JSON Value <span class="property-type">json</span></dt>
+        <dd>JSON statique parsé automatiquement. Ex: <code>{"key": "value", "array": [1, 2, 3]}</code></dd>
+        
+        <dt>Text Value <span class="property-type">string</span></dt>
+        <dd>Texte statique sans traitement. Ex: <code>Hello World</code>, <code>Configuration complete</code></dd>
+    </dl>
 
     <h3>Propriétés d'entrée</h3>
     <dl class="message-properties">
         <dt>payload <span class="property-type">any</span></dt>
-        <dd>Message d'entrée avec les propriétés à extraire</dd>
+        <dd>Message d'entrée avec les propriétés à traiter</dd>
     </dl>
 
     <h3>Sorties</h3>
     <dl class="message-properties">
         <dt>payload <span class="property-type">any</span></dt>
-        <dd>Message modifié avec la valeur copiée vers la destination</dd>
+        <dd>Message modifié avec la valeur assignée à la destination</dd>
     </dl>
 
-    <h3>Exemples</h3>
-    <p><strong>Target:</strong> <code>msg.payload</code></p>
-    <p><strong>Source:</strong> <code>msg.data.user.name</code></p>
-    <p><strong>Résultat:</strong> La valeur de <code>msg.data.user.name</code> sera copiée dans <code>msg.payload</code></p>
+    <h3>Exemples d'utilisation</h3>
     
-    <p><strong>Avec tableaux:</strong></p>
-    <p><strong>Target:</strong> <code>msg.result[2].contact</code></p>
-    <p><strong>Source:</strong> <code>msg.users[0].email</code></p>
+    <h4>Extraction depuis un chemin</h4>
+    <p><strong>Target:</strong> <code>payload</code> | <strong>Source Type:</strong> Message Path<br>
+    <strong>Source Path:</strong> <code>data.user.name</code><br>
+    → Copie <code>msg.data.user.name</code> vers <code>msg.payload</code></p>
+    
+    <h4>Assignation JSON statique</h4>
+    <p><strong>Target:</strong> <code>config</code> | <strong>Source Type:</strong> JSON Value<br>
+    <strong>Content:</strong> <code>{"enabled": true, "retries": 3, "timeout": 5000}</code><br>
+    → Assigne l'objet JSON à <code>msg.config</code></p>
+    
+    <h4>Assignation de texte</h4>
+    <p><strong>Target:</strong> <code>status</code> | <strong>Source Type:</strong> Text Value<br>
+    <strong>Content:</strong> <code>Processing completed successfully</code><br>
+    → Assigne la chaîne à <code>msg.status</code></p>
     
     <h3>Notes</h3>
-    <p>Supporte les chemins imbriqués et les indices de tableau. Si la propriété source n'existe pas, 
-    la valeur <code>undefined</code> sera assignée à la destination.</p>
+    <ul>
+        <li>Par défaut, le Source Type est "Message Path" avec le champ Source Path visible</li>
+        <li>Les types "JSON Value" et "Text Value" masquent Source Path et affichent Content</li>
+        <li>Supporte les chemins imbriqués et indices de tableau pour Message Path</li>
+        <li>JSON Value parse automatiquement le contenu en objet JavaScript</li>
+        <li>Text Value assigne la chaîne telle quelle sans traitement</li>
+    </ul>
 </script>
