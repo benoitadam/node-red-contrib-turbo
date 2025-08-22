@@ -7,12 +7,11 @@
             script: { value: "" },
             mode: { value: "exec" },
             timeout: { value: 30 },
-            outputFormat: { value: "text" }
+            outputFormat: { value: "text" },
+            outputs: { value: 1 } // valeur par défaut
         },
         inputs: 1,
-        outputs: function() {
-            return (this.mode === 'spawn') ? 3 : 1;
-        },
+        outputs: 1,
         outputLabels: function(index) {
             if (this.mode === 'spawn') {
                 return ['stdout', 'stderr', 'result'][index];
@@ -35,6 +34,8 @@
             function updateOutputs() {
                 var mode = $("#node-input-mode").val();
                 // Update output count display
+                var outputs = (mode === "spawn") ? 3 : 1;
+                $("#node-input-outputs").val(outputs);
                 var outputsText = mode === 'spawn' 
                     ? '3 outputs: stdout, stderr, result' 
                     : '1 output: result';
@@ -106,6 +107,7 @@
             <option value="list">List (split lines)</option>
             <option value="split">Split (one message per line)</option>
         </select>
+        <input type="hidden" id="node-input-outputs">
         <div class="form-tips">Format for stdout and stderr outputs</div>
     </div>
     <div class="form-row" style="margin-bottom:0px;">
