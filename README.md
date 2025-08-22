@@ -83,6 +83,64 @@ Content: Hello {{payload.user}}, you have {{data.count}} messages
 - ✅ Gestion d'erreurs avec messages détaillés
 - ✅ 5 modes : Message Path, JSON/Text Value/Template
 
+### helpers-shell
+
+Execute shell commands with configurable execution modes and timeout control.
+
+#### Configuration
+
+- **Mode**: Execution method (Exec or Spawn)
+- **Timeout**: Maximum execution time in seconds (1-300)
+- **Script**: Shell commands to execute with Monaco editor
+
+#### Execution Modes
+
+| Mode | Description | Outputs | Use Case |
+|------|-------------|---------|----------|
+| **Exec** | Buffered execution, collects all output | 1 output: `{out, err, success, code}` | System commands, quick scripts |
+| **Spawn** | Streaming execution, real-time output | 3 outputs: stdout, stderr, result | Long-running processes, log monitoring |
+
+#### Examples
+
+**System Information (Exec mode):**
+```bash
+uname -a
+df -h
+free -m
+```
+→ Returns complete system info in single result
+
+**Log Monitoring (Spawn mode):**
+```bash
+tail -f /var/log/application.log
+```
+→ Streams log entries in real-time
+
+**Build Process (Spawn mode):**
+```bash
+npm install
+npm run build
+npm test
+```
+→ Monitor build progress with real-time feedback
+
+#### Features
+
+- ✅ Two execution modes: buffered (exec) and streaming (spawn)
+- ✅ Configurable timeout protection (1-300 seconds)
+- ✅ Monaco editor with shell script syntax highlighting
+- ✅ Process cleanup on node shutdown
+- ✅ Cross-platform support (Windows/Linux/macOS)
+- ✅ Real-time output streaming in spawn mode
+- ✅ Comprehensive error handling and reporting
+
+#### Security Notes
+
+- Commands run with Node-RED process permissions
+- Validate input to prevent command injection
+- Use timeout to prevent runaway processes
+- Consider restricted shells for untrusted input
+
 ## Licence
 
 MIT

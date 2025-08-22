@@ -36,7 +36,8 @@
     "version": ">=2.0.0",
     "examples": "examples",
     "nodes": {
-      "helpers-set": "dist/helpers-set.js"
+      "helpers-set": "dist/helpers-set.js",
+      "helpers-shell": "dist/helpers-shell.js"
     }
   },
   "devDependencies": {
