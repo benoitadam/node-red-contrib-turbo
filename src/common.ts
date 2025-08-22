@@ -117,9 +117,14 @@ export const setPath = (obj: any, path: string, value: any): any => {
 };
 
 export const setTemplate = (template: string, obj: any): string => {
-  return template.replace(/\{\{(\w+)\}\}/g, (_, path) => {
-    const value = getPath(obj, path);
-    if (typeof value === 'string' || typeof value === 'number') return value;
-    return value;
+  return template.replace(/\{\{([^}]+)\}\}/g, (_, path) => {
+    const value = getPath(obj, path.trim());
+    if (value === undefined || value === null) return '';
+    if (typeof value === 'string') return value;
+    try {
+      return JSON.stringify(value);
+    } catch (err) {
+      return String(value);
+    }
   });
 }
