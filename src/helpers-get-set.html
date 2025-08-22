@@ -1,0 +1,81 @@
+<script type="text/javascript">
+    RED.nodes.registerType('helpers-get-set', {
+        category: 'Helpers',
+        color: '#87CEEB',
+        defaults: {
+            name: { value: "" },
+            source: { value: "payload" },
+            target: { value: "payload" },
+            value: { value: "" }
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "font-awesome/fa-pencil",
+        paletteLabel: 'get set',
+        label: function() {
+            if (this.name) return this.name;
+            const source = this.source || "payload";
+            const target = this.target || "payload";
+            if (target === 'payload') return `get ${source}`;
+            if (source === 'payload') return `set ${target}`;
+            return `${source} → ${target}`;
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="helpers-get-set">
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-target"><i class="icon-share"></i> Target Path</label>
+        <input type="text" id="node-input-target" placeholder="payload">
+        <div class="form-tips">Chemin destination (ex: msg.users[5].name)</div>
+    </div>
+    <div class="form-row">
+        <label for="node-input-source"><i class="icon-arrow-right"></i> Source Path</label>
+        <input type="text" id="node-input-source" placeholder="payload">
+        <div class="form-tips">Chemin source (ex: data.user.name)</div>
+    </div>
+    <div class="form-row">
+        <label for="node-input-value"><i class="icon-edit"></i> Value</label>
+        <input type="text" id="node-input-value" placeholder='{"name": "{{user.name}}"}'>
+        <div class="form-tips">Valeur JSON, string ou nombre à assigner (optionnel, priorité sur Source Path)</div>
+    </div>
+</script>
+
+<script type="text/html" data-help-name="helpers-get-set">
+    <p>Extrait une propriété d'un message à partir d'un chemin et la place dans le payload ou dans une autre propriété.</p>
+    
+    <h3>Configuration</h3>
+    <ul>
+        <li><strong>Target Path:</strong> Chemin vers la destination (ex: msg.result[0].value)</li>
+        <li><strong>Source Path:</strong> Chemin vers la propriété source (ex: msg.a.b.c)</li>
+    </ul>
+
+    <h3>Propriétés d'entrée</h3>
+    <dl class="message-properties">
+        <dt>payload <span class="property-type">any</span></dt>
+        <dd>Message d'entrée avec les propriétés à extraire</dd>
+    </dl>
+
+    <h3>Sorties</h3>
+    <dl class="message-properties">
+        <dt>payload <span class="property-type">any</span></dt>
+        <dd>Message modifié avec la valeur copiée vers la destination</dd>
+    </dl>
+
+    <h3>Exemples</h3>
+    <p><strong>Target:</strong> <code>msg.payload</code></p>
+    <p><strong>Source:</strong> <code>msg.data.user.name</code></p>
+    <p><strong>Résultat:</strong> La valeur de <code>msg.data.user.name</code> sera copiée dans <code>msg.payload</code></p>
+    
+    <p><strong>Avec tableaux:</strong></p>
+    <p><strong>Target:</strong> <code>msg.result[2].contact</code></p>
+    <p><strong>Source:</strong> <code>msg.users[0].email</code></p>
+    
+    <h3>Notes</h3>
+    <p>Supporte les chemins imbriqués et les indices de tableau. Si la propriété source n'existe pas, 
+    la valeur <code>undefined</code> sera assignée à la destination.</p>
+</script>
