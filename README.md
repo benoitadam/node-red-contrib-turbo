@@ -10,9 +10,9 @@ npm install node-red-contrib-helpers
 
 ## Nœuds disponibles
 
-### helpers-get-set
+### helpers-set
 
-Nœud polyvalent qui permet d'extraire des propriétés d'un message ou d'assigner des valeurs statiques selon le type de source choisi.
+Nœud polyvalent qui permet de définir des valeurs aux propriétés d'un message depuis différentes sources : chemins, valeurs statiques ou templates.
 
 #### Configuration
 
@@ -25,34 +25,52 @@ Nœud polyvalent qui permet d'extraire des propriétés d'un message ou d'assign
 
 | Type | Description | Interface | Exemple |
 |------|-------------|-----------|---------|
-| **Message Path** | Extrait une valeur depuis un chemin du message | Champ Source Path | `payload.user.name`, `data.items[0]` |
+| **Message Path** | Définit une valeur depuis un chemin du message | Champ Source Path | `payload.user.name`, `data.items[0]` |
 | **JSON Value** | JSON statique parsé automatiquement | Éditeur Monaco JSON | `{"key": "value", "array": [1, 2, 3]}` |
+| **JSON Template** | JSON avec templates interpolés | Éditeur Monaco JSON | `{"user": "{{payload.name}}", "id": {{data.id}}}` |
 | **Text Value** | Texte statique sans traitement | Éditeur Monaco texte | `Hello World`, `Configuration complete` |
+| **Text Template** | Texte avec templates interpolés | Éditeur Monaco texte | `Hello {{payload.name}}!`, `Status: {{data.status}}` |
 
 #### Exemples d'utilisation
 
-**Extraction depuis un chemin :**
+**Définition depuis un chemin :**
 ```
 Target: payload
 Source Type: Message Path
 Source Path: data.user.name
-→ Copie msg.data.user.name vers msg.payload
+→ Définit msg.payload = msg.data.user.name
 ```
 
-**Assignation JSON statique :**
+**Définition JSON statique :**
 ```
 Target: config
 Source Type: JSON Value
 Content: {"enabled": true, "retries": 3, "timeout": 5000}
-→ Assigne l'objet JSON à msg.config
+→ Définit msg.config = objet JSON
 ```
 
-**Assignation de texte :**
+**Définition avec template JSON :**
+```
+Target: result
+Source Type: JSON Template
+Content: {"user": "{{payload.name}}", "count": {{data.items.length}}}
+→ Définit msg.result = objet JSON avec variables interpolées
+```
+
+**Définition de texte :**
 ```
 Target: status
 Source Type: Text Value
 Content: Processing completed successfully
-→ Assigne la chaîne à msg.status
+→ Définit msg.status = chaîne
+```
+
+**Définition avec template texte :**
+```
+Target: message
+Source Type: Text Template
+Content: Hello {{payload.user}}, you have {{data.count}} messages
+→ Définit msg.message = texte avec variables interpolées
 ```
 
 #### Fonctionnalités
@@ -60,9 +78,10 @@ Content: Processing completed successfully
 - ✅ Interface conditionnelle selon le type de source sélectionné
 - ✅ Éditeur Monaco avec coloration syntaxique (JSON/texte)
 - ✅ Support des chemins imbriqués et indices de tableau
+- ✅ Templates avec interpolation de variables `{{...}}`
 - ✅ Parsing automatique JSON vers objet JavaScript
 - ✅ Gestion d'erreurs avec messages détaillés
-- ✅ Validation du contenu requis pour les types statiques
+- ✅ 5 modes : Message Path, JSON/Text Value/Template
 
 ## Licence
 

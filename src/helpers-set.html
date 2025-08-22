@@ -1,5 +1,5 @@
 <script type="text/javascript">
-    RED.nodes.registerType('helpers-get-set', {
+    RED.nodes.registerType('helpers-set', {
         category: 'Helpers',
         color: '#87CEEB',
         defaults: {
@@ -7,26 +7,32 @@
             source: { value: "" },
             target: { value: "" },
             content: { value: "" },
-            mode: { value: "" }
+            mode: { value: "path" }
         },
         inputs: 1,
         outputs: 1,
         icon: "font-awesome/fa-pencil",
-        paletteLabel: 'get-set',
+        paletteLabel: 'set',
         label: function() {
             if (this.name) return this.name;
-            const source = this.source || "payload";
             const target = this.target || "payload";
-            if (target === 'payload') return `get ${source}`;
-            if (source === 'payload') return `set ${target}`;
-            return `${source} → ${target}`;
+            const mode = this.mode || "path";
+            if (mode === 'path') {
+                if (!this.source || this.source === "payload") {
+                    return `set ${target}`;
+                }
+                return `${target} ← ${this.source || "payload"}`;
+            }
+            const content = this.content || "";
+            const preview = content.length > 10 ? content.substring(0, 10) + "..." : content || "{}";
+            return `${target} ← ${preview}`;
         },
         oneditprepare: function() {
             var that = this;
             
             function updateEditor() {
                 var mode = $("#node-input-mode").val();
-                var mode = 'ace/mode/text';
+                var aceMode = 'ace/mode/text';
                 var tips = '';
                 
                 // Show/hide fields based on source type
@@ -39,27 +45,27 @@
                     
                     switch(mode) {
                         case 'json':
-                            mode = 'ace/mode/json';
+                            aceMode = 'ace/mode/json';
                             tips = 'JSON valide (ex: {"key": "value", "array": [1, 2, 3]})';
                             break;
                         case 'jsonTemplate':
-                            mode = 'ace/mode/json';
-                            tips = 'JSON valide (ex: {"key": "value", "array": [1, 2, 3]})';
+                            aceMode = 'ace/mode/json';
+                            tips = 'JSON avec templates (ex: {"name": "{{payload.user}}", "id": {{data.id}}})';
                             break;
                         case 'text':
-                            mode = 'ace/mode/text';
+                            aceMode = 'ace/mode/text';
                             tips = 'Texte brut sans traitement';
                             break;
                         case 'textTemplate':
-                            mode = 'ace/mode/text';
-                            tips = 'Texte brut sans traitement';
+                            aceMode = 'ace/mode/text';
+                            tips = 'Texte avec templates (ex: Hello {{payload.name}}!)';
                             break;
                     }
                     
                     $("#content-tips").text(tips);
                     
                     if (that.editor) {
-                        that.editor.getSession().setMode(mode);
+                        that.editor.getSession().setMode(aceMode);
                     }
                 }
             }
@@ -96,7 +102,7 @@
     });
 </script>
 
-<script type="text/html" data-template-name="helpers-get-set">
+<script type="text/html" data-template-name="helpers-set">
     <div class="form-row">
         <label for="node-input-name"><i class="icon-tag"></i> Name</label>
         <input type="text" id="node-input-name" placeholder="Name">
@@ -109,8 +115,8 @@
     <div class="form-row">
         <label for="node-input-mode"><i class="icon-cog"></i> Source Type</label>
         <select id="node-input-mode" style="width:70%;">
-            <option value="path">Path</option>
-            <option value="json">JSON</option>
+            <option value="path">Message Path</option>
+            <option value="json">JSON Value</option>
             <option value="text">Text Value</option>
             <option value="jsonTemplate">JSON Template</option>
             <option value="textTemplate">Text Template</option>
@@ -131,8 +137,8 @@
     </div>
 </script>
 
-<script type="text/html" data-help-name="helpers-get-set">
-    <p>Nœud polyvalent qui permet d'extraire des propriétés d'un message ou d'assigner des valeurs statiques selon le type de source choisi.</p>
+<script type="text/html" data-help-name="helpers-set">
+    <p>Nœud qui permet de définir des valeurs aux propriétés d'un message depuis différentes sources : chemins, valeurs statiques ou templates.</p>
     
     <h3>Configuration</h3>
     <ul>
@@ -168,20 +174,30 @@
 
     <h3>Exemples d'utilisation</h3>
     
-    <h4>Extraction depuis un chemin</h4>
+    <h4>Définition depuis un chemin</h4>
     <p><strong>Target:</strong> <code>payload</code> | <strong>Source Type:</strong> Message Path<br>
     <strong>Source Path:</strong> <code>data.user.name</code><br>
-    → Copie <code>msg.data.user.name</code> vers <code>msg.payload</code></p>
+    → Définit <code>msg.payload = msg.data.user.name</code></p>
     
-    <h4>Assignation JSON statique</h4>
+    <h4>Définition JSON statique</h4>
     <p><strong>Target:</strong> <code>config</code> | <strong>Source Type:</strong> JSON Value<br>
     <strong>Content:</strong> <code>{"enabled": true, "retries": 3, "timeout": 5000}</code><br>
-    → Assigne l'objet JSON à <code>msg.config</code></p>
+    → Définit <code>msg.config = objet JSON</code></p>
     
-    <h4>Assignation de texte</h4>
+    <h4>Définition avec template JSON</h4>
+    <p><strong>Target:</strong> <code>result</code> | <strong>Source Type:</strong> JSON Template<br>
+    <strong>Content:</strong> <code>{"user": "{{payload.name}}", "count": {{data.items.length}}}</code><br>
+    → Définit <code>msg.result = objet JSON avec variables</code></p>
+    
+    <h4>Définition de texte</h4>
     <p><strong>Target:</strong> <code>status</code> | <strong>Source Type:</strong> Text Value<br>
     <strong>Content:</strong> <code>Processing completed successfully</code><br>
-    → Assigne la chaîne à <code>msg.status</code></p>
+    → Définit <code>msg.status = chaîne</code></p>
+    
+    <h4>Définition avec template texte</h4>
+    <p><strong>Target:</strong> <code>message</code> | <strong>Source Type:</strong> Text Template<br>
+    <strong>Content:</strong> <code>Hello {{payload.user}}, you have {{data.count}} messages</code><br>
+    → Définit <code>msg.message = texte avec variables</code></p>
     
     <h3>Notes</h3>
     <ul>
