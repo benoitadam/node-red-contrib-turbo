@@ -6,16 +6,18 @@
             name: { value: "" },
             script: { value: "" },
             mode: { value: "exec" },
-            timeout: { value: 30 }
+            timeout: { value: 30 },
+            outputFormat: { value: "text" }
         },
         inputs: 1,
         outputs: function() {
-            return this.mode === 'spawn' ? 3 : 1;
+            return (this.mode === 'spawn') ? 3 : 1;
         },
         outputLabels: function(index) {
             if (this.mode === 'spawn') {
                 return ['stdout', 'stderr', 'result'][index];
             }
+            // For exec mode, only one output
             return 'result';
         },
         icon: "font-awesome/fa-terminal",
@@ -33,7 +35,9 @@
             function updateOutputs() {
                 var mode = $("#node-input-mode").val();
                 // Update output count display
-                var outputsText = mode === 'spawn' ? '3 outputs (stdout, stderr, result)' : '1 output (result)';
+                var outputsText = mode === 'spawn' 
+                    ? '3 outputs: stdout, stderr, result' 
+                    : '1 output: result';
                 $("#outputs-info").text(outputsText);
             }
             
@@ -45,8 +49,6 @@
             
             $("#node-input-mode").change(function() {
                 updateOutputs();
-                // Trigger node update to change output count
-                that.outputs = $(this).val() === 'spawn' ? 3 : 1;
             });
             
             updateOutputs();
@@ -82,18 +84,29 @@
     <div class="form-row">
         <label for="node-input-mode"><i class="icon-cog"></i> Mode</label>
         <select id="node-input-mode" style="width:70%;">
-            <option value="exec">Exec (buffered output)</option>
-            <option value="spawn">Spawn (streaming output)</option>
+            <option value="exec">when finished - exec</option>
+            <option value="spawn">when running - spawn</option>
         </select>
         <div class="form-tips">
-            <strong>Exec:</strong> Collects all output, returns when complete<br>
-            <strong>Spawn:</strong> Streams output in real-time, 3 separate outputs
+            <strong>Exec:</strong> Collects all output, returns when complete (1 output)<br>
+            <strong>Spawn:</strong> Streams output in real-time (3 outputs)
         </div>
     </div>
     <div class="form-row">
         <label for="node-input-timeout"><i class="icon-clock-o"></i> Timeout</label>
         <input type="number" id="node-input-timeout" placeholder="30" min="1" max="300" style="width:70px;"> seconds
         <div class="form-tips">Maximum execution time (1-300 seconds)</div>
+    </div>
+    <div class="form-row">
+        <label for="node-input-outputFormat"><i class="icon-filter"></i> Output Format</label>
+        <select id="node-input-outputFormat" style="width:70%;">
+            <option value="text">Text (string)</option>
+            <option value="buffer">Buffer (binary)</option>
+            <option value="json">JSON (auto-parse)</option>
+            <option value="list">List (split lines)</option>
+            <option value="split">Split (one message per line)</option>
+        </select>
+        <div class="form-tips">Format for stdout and stderr outputs</div>
     </div>
     <div class="form-row" style="margin-bottom:0px;">
         <label for="node-input-script"><i class="icon-edit"></i> Script</label>
@@ -115,6 +128,7 @@
     <ul>
         <li><strong>Mode:</strong> Execution method (Exec or Spawn)</li>
         <li><strong>Timeout:</strong> Maximum execution time in seconds</li>
+        <li><strong>Output Format:</strong> Format for stdout and stderr outputs</li>
         <li><strong>Script:</strong> Shell commands to execute</li>
     </ul>
 
@@ -125,6 +139,18 @@
         
         <dt>Spawn Mode <span class="property-type">streaming</span></dt>
         <dd>Streams output in real-time as it's generated. Three separate outputs for different data types.</dd>
+    </dl>
+
+    <h3>Output Formats</h3>
+    <dl class="message-properties">
+        <dt>Text <span class="property-type">string</span></dt>
+        <dd>Output as UTF-8 string (default). Best for text-based commands.</dd>
+        
+        <dt>Buffer <span class="property-type">buffer</span></dt>
+        <dd>Output as binary Buffer. Use for binary data, files, or when preserving exact bytes.</dd>
+        
+        <dt>JSON <span class="property-type">auto-parse</span></dt>
+        <dd>Try to parse output as JSON, fallback to text if invalid. Useful for commands outputting JSON.</dd>
     </dl>
 
     <h3>Input Properties</h3>

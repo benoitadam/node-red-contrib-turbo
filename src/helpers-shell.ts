@@ -6,6 +6,7 @@ export interface HelpersShellNodeDef extends NodeDef {
     script: string;
     mode: 'exec' | 'spawn';
     timeout: number;
+    outputFormat: 'text' | 'buffer' | 'json' | 'list' | 'split';
 }
 
 module.exports = (RED: NodeAPI) => {
@@ -26,6 +27,32 @@ module.exports = (RED: NodeAPI) => {
             });
             runningProcesses.clear();
         });
+        
+        // Helper function to format output based on outputFormat
+        const formatOutput = (data: string | Buffer): any => {
+            const format = def.outputFormat || 'text';
+            
+            switch (format) {
+                case 'buffer':
+                    return Buffer.isBuffer(data) ? data : Buffer.from(data, 'utf8');
+                case 'json':
+                    const textData = Buffer.isBuffer(data) ? data.toString('utf8') : data;
+                    try {
+                        return JSON.parse(textData);
+                    } catch (e) {
+                        return textData; // Fallback to text if not valid JSON
+                    }
+                case 'list':
+                    const listText = Buffer.isBuffer(data) ? data.toString('utf8') : data;
+                    return listText.split('\n').filter(line => line.trim() !== '');
+                case 'split':
+                    // For split mode, we'll handle this differently in the caller
+                    return Buffer.isBuffer(data) ? data.toString('utf8') : data;
+                case 'text':
+                default:
+                    return Buffer.isBuffer(data) ? data.toString('utf8') : data;
+            }
+        };
 
         this.on('input', (msg: any) => {
             const script = def.script || '';
@@ -43,28 +70,82 @@ module.exports = (RED: NodeAPI) => {
                 const execProcess = exec(script, {
                     timeout: timeoutMs,
                     maxBuffer: 10 * 1024 * 1024, // 10MB buffer
-                    killSignal: 'SIGTERM'
+                    killSignal: 'SIGTERM',
+                    encoding: def.outputFormat === 'buffer' ? 'buffer' : 'utf8'
                 }, (error, stdout, stderr) => {
                     runningProcesses.delete(execProcess);
                     
                     const success = error === null;
                     const code = error?.code || 0;
                     
-                    const result = {
-                        ...msg,
-                        payload: {
-                            out: stdout,
-                            err: stderr,
-                            success: success,
-                            code: code
+                    if (def.outputFormat === 'split') {
+                        // Split mode: send one message per line
+                        const stdoutText = Buffer.isBuffer(stdout) ? stdout.toString('utf8') : stdout;
+                        const stderrText = Buffer.isBuffer(stderr) ? stderr.toString('utf8') : stderr;
+                        
+                        const stdoutLines = stdoutText.split('\n').filter(line => line.trim() !== '');
+                        const stderrLines = stderrText.split('\n').filter(line => line.trim() !== '');
+                        
+                        // Send stdout lines
+                        stdoutLines.forEach(line => {
+                            this.send({
+                                ...msg,
+                                payload: {
+                                    out: line,
+                                    err: '',
+                                    success: success,
+                                    code: code
+                                }
+                            });
+                        });
+                        
+                        // Send stderr lines
+                        stderrLines.forEach(line => {
+                            this.send({
+                                ...msg,
+                                payload: {
+                                    out: '',
+                                    err: line,
+                                    success: success,
+                                    code: code
+                                }
+                            });
+                        });
+                        
+                        // Send final result message if no output lines
+                        if (stdoutLines.length === 0 && stderrLines.length === 0) {
+                            this.send({
+                                ...msg,
+                                payload: {
+                                    out: '',
+                                    err: error && error.killed && error.signal === 'SIGTERM' 
+                                        ? `Process killed due to timeout (${timeoutSeconds}s)` : '',
+                                    success: success,
+                                    code: code
+                                }
+                            });
                         }
-                    };
-                    
-                    if (error && error.killed && error.signal === 'SIGTERM') {
-                        result.payload.err += `\nProcess killed due to timeout (${timeoutSeconds}s)`;
+                    } else {
+                        // Standard mode: single message
+                        const result = {
+                            ...msg,
+                            payload: {
+                                out: formatOutput(stdout),
+                                err: formatOutput(stderr),
+                                success: success,
+                                code: code
+                            }
+                        };
+                        
+                        if (error && error.killed && error.signal === 'SIGTERM') {
+                            const timeoutMsg = `\nProcess killed due to timeout (${timeoutSeconds}s)`;
+                            result.payload.err = def.outputFormat === 'buffer' 
+                                ? Buffer.concat([Buffer.isBuffer(stderr) ? stderr : Buffer.from(stderr), Buffer.from(timeoutMsg)])
+                                : formatOutput(stderr + timeoutMsg);
+                        }
+                        
+                        this.send(result);
                     }
-                    
-                    this.send(result);
                 });
                 
                 runningProcesses.add(execProcess);
@@ -95,20 +176,46 @@ module.exports = (RED: NodeAPI) => {
                 
                 // Handle stdout - Output 1
                 spawnProcess.stdout?.on('data', (data) => {
-                    const stdoutMsg = {
-                        ...msg,
-                        payload: data.toString()
-                    };
-                    this.send([stdoutMsg, null, null]);
+                    if (def.outputFormat === 'split') {
+                        // Split mode: send one message per line
+                        const text: string = Buffer.isBuffer(data) ? data.toString('utf8') : data;
+                        const lines = text.split('\n').filter((line) => line.trim() !== '');
+                        lines.forEach(line => {
+                            const stdoutMsg = {
+                                ...msg,
+                                payload: line
+                            };
+                            this.send([stdoutMsg, null, null]);
+                        });
+                    } else {
+                        const stdoutMsg = {
+                            ...msg,
+                            payload: formatOutput(data)
+                        };
+                        this.send([stdoutMsg, null, null]);
+                    }
                 });
                 
                 // Handle stderr - Output 2
                 spawnProcess.stderr?.on('data', (data) => {
-                    const stderrMsg = {
-                        ...msg,
-                        payload: data.toString()
-                    };
-                    this.send([null, stderrMsg, null]);
+                    if (def.outputFormat === 'split') {
+                        // Split mode: send one message per line
+                        const text: string = Buffer.isBuffer(data) ? data.toString('utf8') : data;
+                        const lines = text.split('\n').filter(line => line.trim() !== '');
+                        lines.forEach(line => {
+                            const stderrMsg = {
+                                ...msg,
+                                payload: line
+                            };
+                            this.send([null, stderrMsg, null]);
+                        });
+                    } else {
+                        const stderrMsg = {
+                            ...msg,
+                            payload: formatOutput(data)
+                        };
+                        this.send([null, stderrMsg, null]);
+                    }
                 });
                 
                 // Handle process completion - Output 3
