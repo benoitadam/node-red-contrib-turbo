@@ -1,6 +1,6 @@
 # Node-RED Contrib Helpers
 
-Un ensemble d'outils utilitaires pour Node-RED qui simplifient les tâches courantes de manipulation de messages et d'assignation de valeurs.
+A collection of utility nodes for Node-RED that simplify common message manipulation and value assignment tasks.
 
 ## Installation
 
@@ -8,80 +8,80 @@ Un ensemble d'outils utilitaires pour Node-RED qui simplifient les tâches coura
 npm install node-red-contrib-helpers
 ```
 
-## Nœuds disponibles
+## Available Nodes
 
 ### helpers-set
 
-Nœud polyvalent qui permet de définir des valeurs aux propriétés d'un message depuis différentes sources : chemins, valeurs statiques ou templates.
+Versatile node that allows setting message property values from different sources: paths, static values, or templates.
 
 #### Configuration
 
-- **Target Path**: Chemin de destination (ex: `payload`, `result[0].value`)
-- **Source Type**: Type de source de données
-- **Source Path**: Chemin source (visible pour Message Path)
-- **Content**: Valeur statique (visible pour JSON/Text Value)
+- **Target Path**: Destination path (ex: `payload`, `result[0].value`)
+- **Source Type**: Type of data source
+- **Source Path**: Source path (visible for Message Path)
+- **Content**: Static value (visible for JSON/Text Value)
 
-#### Types de Source
+#### Source Types
 
-| Type | Description | Interface | Exemple |
+| Type | Description | Interface | Example |
 |------|-------------|-----------|---------|
-| **Message Path** | Définit une valeur depuis un chemin du message | Champ Source Path | `payload.user.name`, `data.items[0]` |
-| **JSON Value** | JSON statique parsé automatiquement | Éditeur Monaco JSON | `{"key": "value", "array": [1, 2, 3]}` |
-| **JSON Template** | JSON avec templates interpolés | Éditeur Monaco JSON | `{"user": "{{payload.name}}", "id": {{data.id}}}` |
-| **Text Value** | Texte statique sans traitement | Éditeur Monaco texte | `Hello World`, `Configuration complete` |
-| **Text Template** | Texte avec templates interpolés | Éditeur Monaco texte | `Hello {{payload.name}}!`, `Status: {{data.status}}` |
+| **Message Path** | Sets value from message path | Source Path field | `payload.user.name`, `data.items[0]` |
+| **JSON Value** | Static JSON automatically parsed | Monaco JSON editor | `{"key": "value", "array": [1, 2, 3]}` |
+| **JSON Template** | JSON with interpolated templates | Monaco JSON editor | `{"user": "{{payload.name}}", "id": {{data.id}}}` |
+| **Text Value** | Static text without processing | Monaco text editor | `Hello World`, `Configuration complete` |
+| **Text Template** | Text with interpolated templates | Monaco text editor | `Hello {{payload.name}}!`, `Status: {{data.status}}` |
 
-#### Exemples d'utilisation
+#### Usage Examples
 
-**Définition depuis un chemin :**
+**Set from path:**
 ```
 Target: payload
 Source Type: Message Path
 Source Path: data.user.name
-→ Définit msg.payload = msg.data.user.name
+→ Sets msg.payload = msg.data.user.name
 ```
 
-**Définition JSON statique :**
+**Set static JSON:**
 ```
 Target: config
 Source Type: JSON Value
 Content: {"enabled": true, "retries": 3, "timeout": 5000}
-→ Définit msg.config = objet JSON
+→ Sets msg.config = JSON object
 ```
 
-**Définition avec template JSON :**
+**Set with JSON template:**
 ```
 Target: result
 Source Type: JSON Template
 Content: {"user": "{{payload.name}}", "count": {{data.items.length}}}
-→ Définit msg.result = objet JSON avec variables interpolées
+→ Sets msg.result = JSON object with interpolated variables
 ```
 
-**Définition de texte :**
+**Set static text:**
 ```
 Target: status
 Source Type: Text Value
 Content: Processing completed successfully
-→ Définit msg.status = chaîne
+→ Sets msg.status = string
 ```
 
-**Définition avec template texte :**
+**Set with text template:**
 ```
 Target: message
 Source Type: Text Template
 Content: Hello {{payload.user}}, you have {{data.count}} messages
-→ Définit msg.message = texte avec variables interpolées
+→ Sets msg.message = text with interpolated variables
 ```
 
-#### Fonctionnalités
+#### Features
 
-- ✅ Interface conditionnelle selon le type de source sélectionné
-- ✅ Éditeur Monaco avec coloration syntaxique (JSON/texte)
-- ✅ Support des chemins imbriqués et indices de tableau
-- ✅ Templates avec interpolation de variables `{{...}}`
-- ✅ Parsing automatique JSON vers objet JavaScript
-- ✅ Gestion d'erreurs avec messages détaillés
-- ✅ 5 modes : Message Path, JSON/Text Value/Template
+- ✅ Conditional interface based on selected source type
+- ✅ Monaco editor with syntax highlighting (JSON/text)
+- ✅ Support for nested paths and array indices
+- ✅ Templates with variable interpolation `{{...}}`
+- ✅ Automatic JSON parsing to JavaScript object
+- ✅ Error handling with detailed messages
+- ✅ 5 modes: Message Path, JSON/Text Value/Template
 
 ### helpers-shell
 
@@ -141,6 +141,6 @@ npm test
 - Use timeout to prevent runaway processes
 - Consider restricted shells for untrusted input
 
-## Licence
+## License
 
 MIT
