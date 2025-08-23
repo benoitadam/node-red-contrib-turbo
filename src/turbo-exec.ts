@@ -147,7 +147,7 @@ module.exports = (RED: NodeAPI) => {
                 const streaming: boolean = def.streaming || msg.streaming || false;
                 const strip: boolean = def.strip || msg.strip || true;
                 const format: string = def.format || msg.format || 'string';
-                const stdin: string = def.stdin || msg.stdin || 'payload';
+                const stdin: string = def.stdin || msg.stdin || '';
                 const timeout: number = def.timeout || msg.timeout || 30;
                 const limit: number = def.limit || msg.limit || 10;
                 const build: string = def.build || msg.build || '';
@@ -166,7 +166,7 @@ module.exports = (RED: NodeAPI) => {
                 if (!isBoolean(streaming)) throw propError('streaming');
                 if (!isBoolean(strip)) throw propError('strip');
                 if (!isString(format)) throw propError('format');
-                if (!isString(stdin) && stdin !== '') throw propError('stdin');
+                if (!isString(stdin)) throw propError('stdin');
                 if (!isNumber(timeout) || timeout < 0) throw propError('timeout');
                 if (!isNumber(limit) || limit < 0) throw propError('limit');
                 if (!isString(build)) throw propError('build');
