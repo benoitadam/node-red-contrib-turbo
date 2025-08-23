@@ -50,6 +50,33 @@ const isString = (v: any): v is string => typeof v === 'string' && v.trim().leng
 const isNumber = (v: any): v is number => typeof v === 'number' && !Number.isNaN(v);
 const isBoolean = (v: any): v is boolean => v === true || v === false;
 
+function toInputChunk(v: any, encoding: BufferEncoding = 'utf8'): Buffer | null {
+  if (v === undefined || v === null) return null;
+  if (Buffer.isBuffer(v)) return v;
+  if (typeof v === 'object') {
+    try { return Buffer.from(JSON.stringify(v), encoding); }
+    catch { return Buffer.from(String(v), encoding); }
+  }
+  return Buffer.from(String(v), encoding);
+}
+
+function writeToStdinSafe(cp: ChildProcessWithoutNullStreams, chunk: Buffer, node: Node) {
+  if (!cp.stdin || cp.stdin.destroyed || !cp.stdin.writable) {
+    node.debug('stdin not writable; skipping write');
+    return;
+  }
+  try {
+    cp.stdin.write(chunk, (err) => {
+      if (!err) return;
+      if ((err as NodeJS.ErrnoException).code === 'EPIPE') node.warn('Child process closed stdin (EPIPE). Input ignored.');
+      else node.error(`stdin write error: ${err.message}`);
+    });
+  } catch (err: any) {
+    if (err?.code === 'EPIPE') node.warn('Child process closed stdin (EPIPE). Input ignored.');
+    else node.error(`stdin write exception: ${err?.message || err}`);
+  }
+}
+
 interface ExecData {
     out: Buffer[],
     err: Buffer[],
@@ -267,6 +294,14 @@ module.exports = (RED: NodeAPI) => {
                 this.log(`Spawning: ${mainCmd} with args: ${JSON.stringify(cmdArgs)}`);
                 const cp = spawn(mainCmd, cmdArgs, spawnOptions);
 
+                cp.stdin?.on('error', (err: NodeJS.ErrnoException) => {
+                    if (err.code === 'EPIPE') {
+                        this.warn('stdin error EPIPE (child not reading/closed).');
+                    } else {
+                        this.error(`stdin stream error: ${err.message}`);
+                    }
+                });
+
                 (cp as any).toJSON = () => null;
 
                 const start = Date.now();
@@ -307,34 +342,21 @@ module.exports = (RED: NodeAPI) => {
                     }, timeout * 1000);
                 }
 
-                if (stdin && stdin.trim() !== '') {
+                if (stdin && stdin.trim() !== "") {
                     try {
-                        let stdinData = getPath(msg, stdin);
-                        this.log(`Writing to stdin: ${typeof stdinData === 'string' ? stdinData.substring(0, 100) : typeof stdinData}`);
-                        
-                        if (cp.stdin && cp.stdin.writable) {
-                            if (Buffer.isBuffer(stdinData)) {
-                                cp.stdin.write(stdinData);
-                            } else {
-                                try {
-                                    stdinData = JSON.stringify(stdinData);
-                                } catch (jsonErr) {
-                                    this.warn(`Failed to stringify stdin (${stdin}) data: ${jsonErr}`);
-                                    stdinData = String(stdinData);
-                                }
-                                cp.stdin.write(stdinData);
-                            }
-                            cp.stdin.end();
+                        const inputVal = getPath(msg, stdin);
+                        const chunk = toInputChunk(inputVal, 'utf8');
+                        this.log(`Writing to stdin: ${Buffer.isBuffer(inputVal) ? 'buffer' : typeof inputVal}`);
+                        if (chunk) {
+                        writeToStdinSafe(cp, chunk, this);
+                        try { cp.stdin?.end(); } catch { /* ignore */ }
                         } else {
-                            this.warn('Process stdin is not writable');
+                        this.debug('No stdin provided or empty; skipping write.');
                         }
                     } catch (stdinErr) {
                         this.error(`Error writing to stdin: ${stdinErr}`);
                     }
                 }
-
-
-
 
                 const onBufferLimit = () => {
                     this.warn(`Buffer limit exceeded (${limitBytes} bytes), killing process`);
