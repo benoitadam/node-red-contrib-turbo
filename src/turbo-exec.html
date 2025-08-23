@@ -1,0 +1,371 @@
+<script type="text/javascript">
+    RED.nodes.registerType('turbo-exec', {
+        category: 'Turbo',
+        color: '#90EE90',
+        defaults: {
+            name: { value: "" },
+            language: { value: "sh" },
+            script: { value: "" },
+            streaming: { value: false },
+            strip: { value: true },
+            format: { value: "string" },
+            stdin: { value: "" },
+            timeout: { value: 30 },
+            limit: { value: 10 },
+            build: { value: "auto" },
+            cmd: { value: "auto" },
+            cwd: { value: "" },
+            env: { value: true },
+            outputs: { value: 1 }
+        },
+        inputs: 1,
+        outputs: 1,
+        outputLabels: function(index) {
+            if (this.streaming) {
+                return ['start', 'out', 'err', 'exit'][index];
+            }
+            return 'result';
+        },
+        icon: "font-awesome/fa-terminal",
+        paletteLabel: 'exec',
+        label: function() {
+            if (this.name) return this.name;
+            const script = this.script || "";
+            const preview = script.split('\n')[0];
+            const shortPreview = preview.length > 20 ? preview.substring(0, 20) + "..." : preview || "exec";
+            return `${this.language}: ${shortPreview}`;
+        },
+        oneditprepare: function() {
+            var that = this;
+            
+            function updateOutputs() {
+                var streaming = $("#node-input-streaming").is(':checked');
+                var outputs = streaming ? 4 : 1;
+                $("#node-input-outputs").val(outputs);
+                that.outputs = outputs;
+                var outputsText = streaming 
+                    ? '4 outputs: start, out, err, exit' 
+                    : '1 output: exit';
+                $("#outputs-info").text(outputsText);
+            }
+            
+            function updateEditor() {
+                var language = $("#node-input-language").val();
+                var mode = 'ace/mode/sh';
+                
+                switch (language) {
+                    case 'ts': mode = 'ace/mode/typescript'; break;
+                    case 'js': mode = 'ace/mode/javascript'; break;
+                    case 'py': mode = 'ace/mode/python'; break;
+                    case 'go': mode = 'ace/mode/golang'; break;
+                    default: mode = 'ace/mode/sh'; break;
+                }
+                
+                that.editor.getSession().setMode(mode);
+            }
+            
+            function updateCommands() {
+                var language = $("#node-input-language").val();
+                var buildInput = $("#node-input-build");
+                var cmdInput = $("#node-input-cmd");
+                
+                var commands = {
+                    'ts': {
+                        build: 'tsc --target es2020 --module commonjs {{scriptFile}} --outFile {{buildFile}}',
+                        cmd: 'node {{buildFile}}'
+                    },
+                    'js': {
+                        build: '',
+                        cmd: 'node {{scriptFile}}'
+                    },
+                    'py': {
+                        build: '',
+                        cmd: 'python {{scriptFile}}'
+                    },
+                    'go': {
+                        build: 'go build -o {{buildFile}} {{scriptFile}}',
+                        cmd: '{{buildFile}}'
+                    },
+                    'sh': {
+                        build: '',
+                        cmd: '/bin/sh {{scriptFile}}'
+                    },
+                    'custom': {
+                        build: '',
+                        cmd: ''
+                    }
+                };
+                
+                var langCommands = commands[language] || commands['custom'];
+                
+                if (buildInput.val() === '' || buildInput.val() === buildInput.attr('data-default')) {
+                    buildInput.val(langCommands.build);
+                    buildInput.attr('data-default', langCommands.build);
+                }
+                
+                if (cmdInput.val() === '' || cmdInput.val() === cmdInput.attr('data-default')) {
+                    cmdInput.val(langCommands.cmd);
+                    cmdInput.attr('data-default', langCommands.cmd);
+                }
+            }
+            
+            this.editor = RED.editor.createEditor({
+                id: 'node-input-script-editor',
+                mode: 'ace/mode/sh',
+                value: $("#node-input-script").val() || ""
+            });
+            
+            $("#node-input-streaming").change(function() {
+                updateOutputs();
+            });
+            
+            $("#node-input-language").change(function() {
+                updateEditor();
+                updateCommands();
+            });
+            
+            updateOutputs();
+            updateCommands();
+        },
+        oneditsave: function() {
+            $("#node-input-script").val(this.editor.getValue());
+            this.editor.destroy();
+            delete this.editor;
+        },
+        oneditcancel: function() {
+            this.editor.destroy();
+            delete this.editor;
+        },
+        oneditresize: function(size) {
+            var rows = $("#dialog-form>div:not(.node-text-editor-row)");
+            var height = $("#dialog-form").height();
+            for (var i=0; i<rows.length; i++) {
+                height -= $(rows[i]).outerHeight(true);
+            }
+            var editorRow = $("#dialog-form>div.node-text-editor-row");
+            height -= (parseInt(editorRow.css("marginTop"))+parseInt(editorRow.css("marginBottom")));
+            $(".node-text-editor").css("height",height+"px");
+            this.editor.resize();
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="turbo-exec">
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-language"><i class="icon-code"></i> Language</label>
+        <select id="node-input-language" style="width:70%;" title="Programming language to execute">
+            <option value="sh">Bash</option>
+            <option value="ts">TypeScript</option>
+            <option value="js">JavaScript</option>
+            <option value="py">Python</option>
+            <option value="go">Go Lang</option>
+            <option value="custom">Select your language</option>
+        </select>
+    </div>
+    <div class="form-row">
+        <label for="node-input-build"><i class="icon-wrench"></i> Build Command</label>
+        <input type="text" id="node-input-build" style="width:70%;" title="Build/compile command with {{scriptFile}} and {{buildFile}} placeholders">
+    </div>
+    <div class="form-row">
+        <label for="node-input-cmd"><i class="icon-play"></i> Runtime Command</label>
+        <input type="text" id="node-input-cmd" style="width:70%;" title="Execution command with {{buildFile}} or {{scriptFile}} placeholders">
+    </div>
+    <div class="form-row">
+        <label><i class="icon-exchange"></i> Streaming</label>
+        <input type="checkbox" id="node-input-streaming" style="display:inline-block; width:auto; vertical-align:top;" title="When enabled, outputs real-time events during execution">
+        <label for="node-input-streaming" style="width:70%;" title="When enabled, outputs real-time events during execution">Enable streaming (4 outputs: start, out, err, exit)</label>
+    </div>
+    <div class="form-row">
+        <label><i class="icon-eraser"></i> Strip ANSI</label>
+        <input type="checkbox" id="node-input-strip" style="display:inline-block; width:auto; vertical-align:top;" checked title="Remove color and formatting codes from output">
+        <label for="node-input-strip" style="width:70%;" title="Remove color and formatting codes from output">Strip ANSI escape codes</label>
+    </div>
+    <div class="form-row">
+        <label for="node-input-format"><i class="icon-filter"></i> Format</label>
+        <select id="node-input-format" style="width:70%;" title="Output format for payload data">
+            <option value="string">String</option>
+            <option value="buffer">Buffer</option>
+            <option value="json">JSON</option>
+            <option value="split">Split by \n</option>
+        </select>
+    </div>
+    <div class="form-row">
+        <label for="node-input-stdin"><i class="icon-sign-in"></i> Stdin</label>
+        <input type="text" id="node-input-stdin" placeholder="payload" style="width:70%;" title="Message property path to pipe to stdin (e.g. 'payload', 'user.name', empty for no stdin)">
+    </div>
+    <div class="form-row">
+        <label for="node-input-timeout"><i class="icon-clock-o"></i> Timeout</label>
+        <input type="number" id="node-input-timeout" placeholder="30" min="0" max="3600" style="width:70px;" title="Maximum execution time (0 = unlimited)"> seconds
+    </div>
+    <div class="form-row">
+        <label for="node-input-limit"><i class="icon-hdd-o"></i> Buffer Limit</label>
+        <input type="number" id="node-input-limit" placeholder="10" min="0" max="1000" style="width:70px;" title="Maximum buffer size (0 = unlimited)"> MB
+    </div>
+    <div class="form-row">
+        <label for="node-input-cwd"><i class="icon-folder-open"></i> Working Directory</label>
+        <input type="text" id="node-input-cwd" placeholder="Leave empty for process.cwd()" style="width:70%;" title="Working directory for command execution">
+    </div>
+    <div class="form-row">
+        <label><i class="icon-environment-o"></i> Environment</label>
+        <input type="checkbox" id="node-input-env" style="display:inline-block; width:auto; vertical-align:top;" checked title="Pass Node-RED environment variables to process">
+        <label for="node-input-env" style="width:70%;" title="Pass Node-RED environment variables to process">Link environment variables</label>
+    </div>
+    <div class="form-row" style="margin-bottom:0px;">
+        <label for="node-input-script"><i class="icon-edit"></i> Script</label>
+        <input type="hidden" id="node-input-script">
+    </div>
+    <div class="form-row node-text-editor-row">
+        <div style="height: 200px; min-height:120px;" class="node-text-editor" id="node-input-script-editor" title="Code to execute. Use {{payload.property}} for template substitution."></div>
+    </div>
+    <div class="form-row">
+        <input type="hidden" id="node-input-outputs">
+        <div id="outputs-info" style="font-style: italic; color: #666;"></div>
+    </div>
+</script>
+
+<script type="text/html" data-help-name="turbo-exec">
+    <p>Execute code in multiple languages with configurable runtime environments and streaming output.</p>
+    
+    <h3>Languages Supported</h3>
+    <dl class="message-properties">
+        <dt>Bash (sh) <span class="property-type">default</span></dt>
+        <dd>Shell commands with template variable replacement</dd>
+        
+        <dt>TypeScript (ts)</dt>
+        <dd>TypeScript code with multiple runtime options</dd>
+        
+        <dt>JavaScript (js)</dt>
+        <dd>JavaScript code for Node.js or Deno</dd>
+        
+        <dt>Python (py)</dt>
+        <dd>Python scripts with python/python3 support</dd>
+        
+        <dt>Go (go)</dt>
+        <dd>Go programs with run or compile modes</dd>
+        
+        <dt>Custom</dt>
+        <dd>Specify your own runtime command</dd>
+    </dl>
+
+    <h3>Runtime Options</h3>
+    <p>Runtime options change based on the selected language:</p>
+    <ul>
+        <li><strong>TypeScript:</strong> tsc, ts-node, Deno, Deno cache</li>
+        <li><strong>JavaScript:</strong> eval, Node.js, Deno</li>
+        <li><strong>Python:</strong> python, python3</li>
+        <li><strong>Go:</strong> go run, go compile</li>
+        <li><strong>Bash:</strong> with/without template replacement</li>
+    </ul>
+
+    <h3>Execution Modes</h3>
+    <dl class="message-properties">
+        <dt>Standard Mode <span class="property-type">1 output</span></dt>
+        <dd>Returns final result when execution completes</dd>
+        
+        <dt>Streaming Mode <span class="property-type">4 outputs</span></dt>
+        <dd>Real-time events: start, stdout, stderr, exit</dd>
+    </dl>
+
+    <h3>Input Properties</h3>
+    <dl class="message-properties">
+        <dt>Any message <span class="property-type">object</span></dt>
+        <dd>Message passed to execution context and available for templating</dd>
+    </dl>
+
+    <h3>Output Properties</h3>
+    
+    <h4>Standard Mode (1 output)</h4>
+    <dl class="message-properties">
+        <dt>topic <span class="property-type">string</span></dt>
+        <dd>Always 'exit'</dd>
+        
+        <dt>payload <span class="property-type">string|array|object</span></dt>
+        <dd>Formatted stdout output (format depends on Format setting)</dd>
+        
+        <dt>exec.out <span class="property-type">array</span></dt>
+        <dd>All stdout chunks as array</dd>
+        
+        <dt>exec.err <span class="property-type">array</span></dt>
+        <dd>All stderr chunks as array</dd>
+        
+        <dt>exec.success <span class="property-type">boolean</span></dt>
+        <dd>True if process completed successfully (exit code 0)</dd>
+        
+        <dt>exec.code <span class="property-type">number</span></dt>
+        <dd>Process exit code</dd>
+        
+        <dt>exec.time <span class="property-type">number</span></dt>
+        <dd>Execution time in milliseconds</dd>
+    </dl>
+    
+    <h4>Streaming Mode (4 outputs)</h4>
+    <dl class="message-properties">
+        <dt>Output 1 - start <span class="property-type">object</span></dt>
+        <dd>Emitted when process starts. Topic: 'start', Payload: script</dd>
+        
+        <dt>Output 2 - out <span class="property-type">object</span></dt>
+        <dd>Real-time stdout chunks. Topic: 'out', Payload: formatted output</dd>
+        
+        <dt>Output 3 - err <span class="property-type">object</span></dt>
+        <dd>Real-time stderr chunks. Topic: 'err', Payload: formatted output</dd>
+        
+        <dt>Output 4 - exit <span class="property-type">object</span></dt>
+        <dd>Final result when process completes. Topic: 'exit', includes full exec object</dd>
+    </dl>
+
+    <h3>Configuration</h3>
+    <ul>
+        <li><strong>Language:</strong> Programming language to execute</li>
+        <li><strong>Runtime:</strong> Specific runtime/compiler for the language</li>
+        <li><strong>Streaming:</strong> Enable real-time output (4 outputs vs 1)</li>
+        <li><strong>Strip ANSI:</strong> Remove color/formatting codes from output</li>
+        <li><strong>Format:</strong> Output format (string, buffer, JSON, split)</li>
+        <li><strong>Stdin:</strong> How to pipe input message to process</li>
+        <li><strong>Timeout:</strong> Maximum execution time (0 = unlimited)</li>
+        <li><strong>Buffer Limit:</strong> Maximum output buffer size</li>
+        <li><strong>Working Directory:</strong> Execution directory</li>
+        <li><strong>Environment:</strong> Pass Node-RED environment variables</li>
+    </ul>
+
+    <h3>Template Variables</h3>
+    <p>Use <code>{{property.path}}</code> syntax in your script to access message properties:</p>
+    <pre>echo "Hello {{payload.name}}!"
+curl -X POST {{payload.url}} -d '{{payload.data}}'</pre>
+
+    <h3>Usage Examples</h3>
+    
+    <h4>Python Data Processing</h4>
+    <p><strong>Language:</strong> Python | <strong>Script:</strong></p>
+    <pre>import json
+data = {{payload}}
+result = sum(data) if isinstance(data, list) else 0
+print(json.dumps({"sum": result}))</pre>
+    
+    <h4>TypeScript API Call</h4>
+    <p><strong>Language:</strong> TypeScript | <strong>Runtime:</strong> Deno | <strong>Script:</strong></p>
+    <pre>const response = await fetch('{{payload.url}}');
+const data = await response.json();
+console.log(JSON.stringify(data));</pre>
+    
+    <h4>Go Processing</h4>
+    <p><strong>Language:</strong> Go | <strong>Script:</strong></p>
+    <pre>package main
+import ("fmt", "encoding/json")
+func main() {
+    data := `{{payload}}`
+    fmt.Printf("Processing: %s\n", data)
+}</pre>
+    
+    <h3>Security Notes</h3>
+    <ul>
+        <li>Code runs with Node-RED process permissions</li>
+        <li>Validate and sanitize input to prevent injection attacks</li>
+        <li>Use timeout and buffer limits to prevent resource exhaustion</li>
+        <li>Be cautious with template variable substitution</li>
+        <li>Consider sandboxing for untrusted code execution</li>
+    </ul>
+</script>

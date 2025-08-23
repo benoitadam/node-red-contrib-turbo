@@ -1,7 +1,7 @@
 import { NodeAPI, Node, NodeDef } from 'node-red';
 import { getPath, setPath, setTemplate } from './common';
 
-export interface HelpersSetNodeDef extends NodeDef {
+export interface TurboSetNodeDef extends NodeDef {
     name: string;
     source: string;
     target: string;
@@ -10,7 +10,7 @@ export interface HelpersSetNodeDef extends NodeDef {
 }
 
 module.exports = (RED: NodeAPI) => {
-    const HelpersSetNode = function(this: Node, def: HelpersSetNodeDef) {
+    const TurboSetNode = function(this: Node, def: TurboSetNodeDef) {
         RED.nodes.createNode(this, def);
 
         this.on('input', (msg: any) => {
@@ -52,5 +52,5 @@ module.exports = (RED: NodeAPI) => {
         });
     }
     
-    RED.nodes.registerType("helpers-set", HelpersSetNode);
+    RED.nodes.registerType("turbo-set", TurboSetNode);
 };

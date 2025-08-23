@@ -1,6 +1,6 @@
 <script type="text/javascript">
-    RED.nodes.registerType('helpers-set', {
-        category: 'Helpers',
+    RED.nodes.registerType('turbo-set', {
+        category: 'Turbo',
         color: '#87CEEB',
         defaults: {
             name: { value: "" },
@@ -103,7 +103,7 @@
     });
 </script>
 
-<script type="text/html" data-template-name="helpers-set">
+<script type="text/html" data-template-name="turbo-set">
     <div class="form-row">
         <label for="node-input-name"><i class="icon-tag"></i> Name</label>
         <input type="text" id="node-input-name" placeholder="Name">
@@ -138,7 +138,7 @@
     </div>
 </script>
 
-<script type="text/html" data-help-name="helpers-set">
+<script type="text/html" data-help-name="turbo-set">
     <p>Node that allows setting message property values from different sources: paths, static values, or templates.</p>
     
     <h3>Configuration</h3>

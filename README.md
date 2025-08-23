@@ -1,16 +1,16 @@
-# Node-RED Contrib Helpers
+# Node-RED Contrib Turbo
 
 A collection of utility nodes for Node-RED that simplify common message manipulation and value assignment tasks.
 
 ## Installation
 
 ```bash
-npm install node-red-contrib-helpers
+npm install node-red-contrib-turbo
 ```
 
 ## Available Nodes
 
-### helpers-set
+### turbo-set
 
 Versatile node that allows setting message property values from different sources: paths, static values, or templates.
 
@@ -83,7 +83,7 @@ Content: Hello {{payload.user}}, you have {{data.count}} messages
 - ✅ Error handling with detailed messages
 - ✅ 5 modes: Message Path, JSON/Text Value/Template
 
-### helpers-shell
+### turbo-exec
 
 Execute shell commands with configurable execution modes and timeout control.
 
