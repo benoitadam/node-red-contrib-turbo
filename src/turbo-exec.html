@@ -12,11 +12,12 @@
             stdin: { value: "" },
             timeout: { value: 30 },
             limit: { value: 10 },
-            build: { value: "auto" },
-            cmd: { value: "auto" },
+            build: { value: "" },
+            cmd: { value: "" },
             cwd: { value: "" },
             env: { value: true },
-            outputs: { value: 1 }
+            outputs: { value: 1 },
+            updated: { value: 0 }
         },
         inputs: 1,
         outputs: 1,
@@ -107,6 +108,13 @@
                     cmdInput.val(langCommands.cmd);
                     cmdInput.attr('data-default', langCommands.cmd);
                 }
+                
+                // Mark as updated when commands change
+                markAsUpdated();
+            }
+            
+            function markAsUpdated() {
+                $("#node-input-updated").val(Date.now());
             }
             
             this.editor = RED.editor.createEditor({
@@ -114,6 +122,9 @@
                 mode: 'ace/mode/sh',
                 value: $("#node-input-script").val() || ""
             });
+            
+            // Listen for editor changes to update timestamp
+            this.editor.on('change', scheduleUpdate);
             
             $("#node-input-streaming").change(function() {
                 updateOutputs();
@@ -124,8 +135,20 @@
                 updateCommands();
             });
             
+            $("#node-input-build, #node-input-cmd").on('input change', function() {
+                markAsUpdated();
+            });
+            
+            // Update timestamp when script editor changes
+            var updateTimer;
+            function scheduleUpdate() {
+                if (updateTimer) clearTimeout(updateTimer);
+                updateTimer = setTimeout(markAsUpdated, 1000); // Debounce 1 second
+            }
+            
             updateOutputs();
             updateCommands();
+            markAsUpdated(); // Initial timestamp
         },
         oneditsave: function() {
             $("#node-input-script").val(this.editor.getValue());
@@ -223,6 +246,7 @@
     </div>
     <div class="form-row">
         <input type="hidden" id="node-input-outputs">
+        <input type="hidden" id="node-input-updated">
         <div id="outputs-info" style="font-style: italic; color: #666;"></div>
     </div>
 </script>

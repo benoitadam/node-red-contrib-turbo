@@ -1,7 +1,15 @@
 import { NodeAPI, Node, NodeDef } from 'node-red';
 import { spawn, ChildProcess, SpawnOptionsWithoutStdio, ChildProcessWithoutNullStreams } from 'child_process';
 import { getPath, setTemplate } from './common';
-import { writeFile } from 'fs/promises';
+import { writeFile, readFile } from 'fs/promises';
+import { existsSync } from 'fs';
+
+interface CacheMetadata {
+    updated?: number;
+    runCmd?: string;
+    mainCmd?: string;
+    cmdArgs?: string[];
+}
 
 export interface TurboExecNodeDef extends NodeDef {
     name: string;
@@ -17,6 +25,7 @@ export interface TurboExecNodeDef extends NodeDef {
     cmd: string;
     cwd: string;
     env: boolean;
+    updated: number;
 }
 
 interface ExecEvent {
@@ -54,6 +63,7 @@ interface ExecData {
     signal?: string|null,
     success?: boolean,
     error?: string,
+    script?: string,
 }
 
 module.exports = (RED: NodeAPI) => {
@@ -71,15 +81,40 @@ module.exports = (RED: NodeAPI) => {
             processes.clear();
         });
 
+        const buildScript = async (scriptFile: string, buildFile: string, buildCmd: string, script: string, cwd: string): Promise<void> => {
+            this.log(`Running build command: ${buildCmd}`);
+
+            const buildProcess = spawn('/bin/sh', ['-c', buildCmd], {
+                cwd,
+                env: process.env,
+                stdio: ['pipe', 'pipe', 'pipe'] as const
+            });
+
+            await new Promise<void>((resolve, reject) => {
+                let stderr = '';
+                
+                buildProcess.stderr?.on('data', (data) => {
+                    stderr += data.toString();
+                });
+                
+                buildProcess.on('close', (code) => {
+                    if (code === 0) {
+                        resolve();
+                    } else {
+                        reject(new Error(`Build failed with exit code ${code}: ${stderr}`));
+                    }
+                });
+                
+                buildProcess.on('error', (error) => {
+                    reject(new Error(`Build spawn error: ${error.message}`));
+                });
+            });
+
+            this.log(`Build completed successfully`);
+        };
+
         this.on('input', async (msg: any) => {
             try {
-                // const scriptTemplate = def.script || '';
-                // const streaming = def.streaming || false;
-                // const timeoutSeconds = def.timeout || 30;
-                // const timeoutMs = timeoutSeconds > 0 ? timeoutSeconds * 1000 : 0;
-                // const limitMB = def.limit || 10;
-                // const limitBytes = limitMB > 0 ? limitMB * 1024 * 1024 : 0;
-
                 let script: string = def.script || msg.script || '';
                 const language: string = def.language || msg.language || 'sh';
                 const streaming: boolean = def.streaming || msg.streaming || false;
@@ -92,6 +127,7 @@ module.exports = (RED: NodeAPI) => {
                 const cmd: string = def.cmd || msg.cmd || '';
                 const cwd: string = def.cwd || msg.cwd || process.cwd();
                 const env: boolean = def.env || msg.env || true;
+                const updated: number = def.updated || 0;
 
                 const params = { language, script, streaming, strip, format, stdin, timeout, limit, build, cmd, cwd, env };
                 this.log(`turbo-exec executing with params: ${JSON.stringify(params)}`);
@@ -114,24 +150,113 @@ module.exports = (RED: NodeAPI) => {
                 const limitBytes = limit > 0 ? limit * 1024 * 1024 : 0;
                 const encoding = 'utf8';
 
-                script = setTemplate(script, msg);
+                this.log(`Script updated : ${updated}`);
                 
-                this.log(`script: ${script}`);
+                let mainCmd: string;
+                let cmdArgs: string[];
+
+                const templateData = { node: this, env: process.env, script, ...msg };
                 
-                // const buildCmd = setTemplate(build, { ...msg, scriptFile, buildFile });
-                // const runCmd = setTemplate(cmd, { ...msg, script });
-                
-                // this.log(`Build command: ${runCmd}`);
-                // this.log(`Run command: ${runCmd}`);
-                
-                // Parse command and arguments safely
-                // const cmdParts = runCmd.trim().split(/\s+/);
-                // if (cmdParts.length === 0) {
-                //     throw new Error('Empty command');
-                // }
-                
-                // const mainCmd = cmdParts[0];
-                // const cmdArgs = cmdParts.slice(1);
+                // For shell scripts, apply template directly and execute without caching
+                if (language === 'sh') {
+                    script = setTemplate(script, templateData);
+                    this.log(`Executing shell script directly (${script.length} chars)`);
+                    
+                    mainCmd = '/bin/sh';
+                    cmdArgs = ['-c', script];
+                } else {
+                    // For compiled languages, use cache system
+                    const buildExt = language === 'go' ? '' : '.js';
+                    
+                    const id = this.id;
+                    const cacheFile = `${cwd}/.red_turbo_${id}.json`;
+                    
+                    this.log(`Using cacheFile: ${cacheFile}`);
+                    
+                    let cache: CacheMetadata = {};
+                    try {
+                        if (existsSync(cacheFile)) {
+                            const cacheContent = await readFile(cacheFile, 'utf8');
+                            const cacheData = JSON.parse(cacheContent) as CacheMetadata;
+                            if (!isObject(cacheData)) throw '...' // TODO
+                            cache = cacheData;
+                            this.log(`Cache found - updated: ${cache.updated}`);
+                        }
+                    } catch (err) {
+                        this.warn(`Failed to read cache file: ${err}`);
+                    }
+                    
+                    // Check if we need to rebuild  
+                    const scriptFile = `${cwd}/.red_turbo_${id}.${language}`;
+                    const buildFile = `${cwd}/.red_turbo_${id}${buildExt}`;
+                    const needsRebuild = !cache || cache.updated !== updated || !existsSync(buildFile);
+                                       
+                    if (needsRebuild) {
+                        this.log(`Rebuilding`);
+                        templateData.scriptFile = scriptFile;
+                        templateData.buildFile = buildFile;
+
+                        this.log(`Rebuilding, scriptFile: ${scriptFile}, buildFile: ${buildFile}`);
+
+                        const buildCmd = build ? setTemplate(build, templateData) : '';
+                        const runCmd = setTemplate(cmd, templateData);
+                        
+                        this.log(`Script length: ${script.length} chars`);
+                        this.log(`Build command: ${buildCmd}`);
+                        this.log(`Run command: ${runCmd}`);
+                        
+                        // Write script to file
+                        try {
+                            await writeFile(scriptFile, script, 'utf8');
+                            this.log(`Script written to ${scriptFile}`);
+                        } catch (writeErr) {
+                            throw new Error(`Failed to write script file: ${writeErr}`);
+                        }
+
+                        if (buildCmd && buildCmd.trim()) {
+                            await buildScript(scriptFile, buildFile, buildCmd, script, cwd);
+                        }
+
+                        // Parse and cache runtime command
+                        const cmdParts = runCmd.trim().split(/\s+/);
+                        if (cmdParts.length === 0) {
+                            throw new Error('Empty runtime command');
+                        }
+                        
+                        mainCmd = cmdParts[0];
+                        cmdArgs = cmdParts.slice(1);
+                        
+                        // Save cache with parsed command
+                        try {
+                            const newCache: CacheMetadata = {
+                                updated: updated,
+                                runCmd: cmd,
+                                mainCmd: mainCmd,
+                                cmdArgs: cmdArgs
+                            };
+                            await writeFile(cacheFile, JSON.stringify(newCache, null, 2), 'utf8');
+                            this.log(`Cache metadata saved to ${cacheFile}`);
+                        } catch (cacheErr) {
+                            this.warn(`Failed to save cache metadata: ${cacheErr}`);
+                        }
+                    } else {
+                        this.log(`Cache hit - using existing files`);
+                        // Use cached command from previous build
+                        if (cache.mainCmd && cache.cmdArgs) {
+                            mainCmd = cache.mainCmd;
+                            cmdArgs = cache.cmdArgs;
+                        } else {
+                            // Fallback: parse runtime command if cache doesn't have it
+                            const runCmd = setTemplate(cmd, templateData);
+                            const cmdParts = runCmd.trim().split(/\s+/);
+                            if (cmdParts.length === 0) {
+                                throw new Error('Empty runtime command');
+                            }
+                            mainCmd = cmdParts[0];
+                            cmdArgs = cmdParts.slice(1);
+                        }
+                    }
+                }
                 
                 const spawnOptions: SpawnOptionsWithoutStdio = {
                     cwd,
@@ -139,8 +264,8 @@ module.exports = (RED: NodeAPI) => {
                     stdio: ['pipe', 'pipe', 'pipe']
                 };
                 
-                // this.log(`Spawning: ${mainCmd} with args: ${JSON.stringify(cmdArgs)}`);
-                const cp = spawn('/bin/sh', ['-c', script], spawnOptions);
+                this.log(`Spawning: ${mainCmd} with args: ${JSON.stringify(cmdArgs)}`);
+                const cp = spawn(mainCmd, cmdArgs, spawnOptions);
 
                 (cp as any).toJSON = () => null;
 
@@ -152,6 +277,7 @@ module.exports = (RED: NodeAPI) => {
                     time: 0,
                     length: 0,
                     pid: cp.pid,
+                    script,
                     cp,
                 };
                 msg.exec = exec;
@@ -163,7 +289,6 @@ module.exports = (RED: NodeAPI) => {
                     const startEvent = {
                         ...msg,
                         topic: 'start',
-                        payload: exec,
                         exec,
                     };
                     this.send([startEvent, null, null, null]);
@@ -320,6 +445,9 @@ module.exports = (RED: NodeAPI) => {
                         } else {
                             this.send(exitEvent);
                         }
+                        
+                        // Keep cache files for next execution
+                        this.log(`Execution completed - cache files preserved`);
                     } catch (error) {
                         this.error(`Error in close handler: ${error}`);
                     }
@@ -349,6 +477,9 @@ module.exports = (RED: NodeAPI) => {
                         } else {
                             this.send(errorEvent);
                         }
+                        
+                        // Keep cache files even on error
+                        this.log(`Error occurred - cache files preserved`);
                     } catch (error) {
                         this.error(`Error in error handler: ${error}`);
                     }
