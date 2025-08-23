@@ -71,42 +71,44 @@
                 var cmdInput = $("#node-input-cmd");
                 
                 var commands = {
-                    'ts': {
-                        build: 'tsc --target es2020 --module commonjs {{scriptFile}} --outFile {{buildFile}}',
-                        cmd: 'node {{buildFile}}'
-                    },
-                    'js': {
-                        build: '',
-                        cmd: 'node {{scriptFile}}'
-                    },
-                    'py': {
-                        build: '',
-                        cmd: 'python {{scriptFile}}'
-                    },
-                    'go': {
-                        build: 'go build -o {{buildFile}} {{scriptFile}}',
-                        cmd: '{{buildFile}}'
-                    },
-                    'sh': {
-                        build: '',
-                        cmd: '/bin/sh {{scriptFile}}'
-                    },
-                    'custom': {
-                        build: '',
-                        cmd: ''
-                    }
+                    'ts': [
+                        'tsc --target es2020 --module commonjs {{scriptFile}} --outFile {{buildFile}}',
+                        'node {{buildFile}}'
+                    ],
+                    'js': [
+                        '',
+                        'node {{scriptFile}}'
+                    ],
+                    'py': [
+                        '',
+                        'python {{scriptFile}}'
+                    ],
+                    'go': [
+                        'go build -o {{buildFile}} {{scriptFile}}',
+                        '{{buildFile}}'
+                    ],
+                    'sh': [
+                        '',
+                        '/bin/sh {{scriptFile}}'
+                    ],
+                    'custom': [
+                        '',
+                        ''
+                    ]
                 };
                 
                 var langCommands = commands[language] || commands['custom'];
+                var defaultBuild = langCommands[0];
+                var defaultCmd = langCommands[1];
                 
                 if (buildInput.val() === '' || buildInput.val() === buildInput.attr('data-default')) {
-                    buildInput.val(langCommands.build);
-                    buildInput.attr('data-default', langCommands.build);
+                    buildInput.val(defaultBuild);
+                    buildInput.attr('data-default', defaultBuild);
                 }
                 
                 if (cmdInput.val() === '' || cmdInput.val() === cmdInput.attr('data-default')) {
-                    cmdInput.val(langCommands.cmd);
-                    cmdInput.attr('data-default', langCommands.cmd);
+                    cmdInput.val(defaultCmd);
+                    cmdInput.attr('data-default', defaultCmd);
                 }
                 
                 // Mark as updated when commands change
