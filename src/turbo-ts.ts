@@ -123,13 +123,7 @@ module.exports = (RED: NodeAPI) => {
                             util: require('util'),
                             
                             // Fetch API
-                            fetch: global.fetch || require('node-fetch').default,
-                            
-                            // Results container
-                            __results: [],
-                            __send: (output: any, outputIndex: number = 0) => {
-                                context.__results[outputIndex] = output;
-                            }
+                            fetch: global.fetch || require('node-fetch').default
                         });
                         
                         compilationCache = {
@@ -150,7 +144,6 @@ module.exports = (RED: NodeAPI) => {
                     this.log('Using cached compilation');
                     // Update context with new message
                     compilationCache.context.msg = msg;
-                    compilationCache.context.__results = [];
                 }
                 
                 // Execute compiled code in VM
@@ -173,31 +166,36 @@ module.exports = (RED: NodeAPI) => {
                     const executionTime = Date.now() - startTime;
                     this.log(`Execution completed in ${executionTime}ms`);
                     
-                    // Prepare outputs
-                    const outputMsgs: any[] = [];
+                    // Handle multiple outputs with array return or single output
+                    let outputMsgs: any[];
                     
-                    for (let i = 0; i < outputs; i++) {
-                        const result = results && results[i] !== undefined ? results[i] : null;
-                        
-                        if (result !== null) {
-                            outputMsgs[i] = {
-                                ...msg,
-                                payload: result,
-                                topic: `output-${i}`,
+                    if (Array.isArray(results)) {
+                        // Multiple outputs: return [msg1, msg2, msg3]
+                        outputMsgs = results.slice(0, outputs).map((result, i) => {
+                            if (result === null || result === undefined) {
+                                return null;
+                            }
+                            return {
+                                ...result,
                                 _executionTime: executionTime
                             };
-                        } else {
-                            outputMsgs[i] = null;
+                        });
+                        
+                        // Fill remaining outputs with null if needed
+                        while (outputMsgs.length < outputs) {
+                            outputMsgs.push(null);
                         }
-                    }
-                    
-                    // If no explicit outputs were set, send result to first output
-                    if (outputMsgs.every(o => o === null)) {
-                        outputMsgs[0] = {
-                            ...msg,
-                            payload: results,
+                    } else {
+                        // Single output: return msg
+                        outputMsgs = [{
+                            ...results,
                             _executionTime: executionTime
-                        };
+                        }];
+                        
+                        // Fill remaining outputs with null
+                        while (outputMsgs.length < outputs) {
+                            outputMsgs.push(null);
+                        }
                     }
                     
                     this.send(outputMsgs);
