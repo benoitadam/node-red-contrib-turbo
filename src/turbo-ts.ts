@@ -14,16 +14,6 @@ interface CompilationCache {
     lastCompiled: number;
 }
 
-function checkTypeScriptAPI(node: Node): boolean {
-    try {
-        require('typescript');
-        node.log('TypeScript API available');
-        return true;
-    } catch (error) {
-        node.error('TypeScript API not available - please install typescript');
-        return false;
-    }
-}
 
 function compileTypeScript(script: string, node: Node): string {
     try {
@@ -82,24 +72,6 @@ function compileTypeScript(script: string, node: Node): string {
     }
 }
 
-function createNodeRedContext(msg: any, node: Node, RED: NodeAPI): vm.Context {
-    const context = vm.createContext({
-        // Full Node-RED context
-        ...global,
-        msg,
-        node,
-        RED,
-        
-        // Results container
-        __results: [],
-        __send: (output: any, outputIndex: number = 0) => {
-            if (!context.__results) context.__results = [];
-            context.__results[outputIndex] = output;
-        }
-    });
-    
-    return context;
-}
 
 module.exports = (RED: NodeAPI) => {
     const TurboTypeScriptNode = function(this: Node, def: TurboTypeScriptNodeDef) {
@@ -107,33 +79,10 @@ module.exports = (RED: NodeAPI) => {
         
         const cache = new Map<string, CompilationCache>();
         
-        // Initialize TypeScript API on node startup
-        const initPromise = Promise.resolve((() => {
-            try {
-                this.log('Initializing turbo-ts node...');
-                const available = checkTypeScriptAPI(this);
-                
-                if (available) {
-                    this.log('turbo-ts ready');
-                    return true;
-                } else {
-                    this.error('Failed to initialize TypeScript API - node will not function');
-                    return false;
-                }
-            } catch (error) {
-                this.error(`Initialization error: ${error}`);
-                return false;
-            }
-        })());
+        this.log('turbo-ts ready');
         
         this.on('input', async (msg: any) => {
             try {
-                // Wait for initialization to complete
-                const ready = await initPromise;
-                if (!ready) {
-                    this.error('Node not ready - TypeScript API initialization failed');
-                    return;
-                }
                 
                 let script: string = def.script || msg.script || '';
                 const outputs: number = def.outputs || msg.outputs || 1;
@@ -155,21 +104,37 @@ module.exports = (RED: NodeAPI) => {
                     this.log('Compiling TypeScript script...');
                     
                     try {
-                        const compiledCode = compileTypeScript(script, this);
+                        // Wrap script in async function before compilation
+                        const wrappedScript = `(async function() { ${script} })()`;
+                        const compiledCode = compileTypeScript(wrappedScript, this);
                         
-                        // Wrap compiled code to capture results
-                        const wrappedCode = `
-                            (function() {
-                                ${compiledCode}
-                                return __results;
-                            })();
-                        `;
-                        
-                        const context = createNodeRedContext(msg, this, RED);
+                        const context = vm.createContext({
+                            // Full Node-RED context
+                            ...global,
+                            msg,
+                            node: this,
+                            RED,
+                            
+                            // Common Node.js modules (instead of imports)
+                            fs: require('fs/promises'),
+                            path: require('path'),
+                            os: require('os'),
+                            crypto: require('crypto'),
+                            util: require('util'),
+                            
+                            // Fetch API
+                            fetch: global.fetch || require('node-fetch').default,
+                            
+                            // Results container
+                            __results: [],
+                            __send: (output: any, outputIndex: number = 0) => {
+                                context.__results[outputIndex] = output;
+                            }
+                        });
                         
                         compilationCache = {
                             script,
-                            compiledCode: wrappedCode,
+                            compiledCode,
                             context,
                             lastCompiled: Date.now()
                         };
@@ -193,7 +158,7 @@ module.exports = (RED: NodeAPI) => {
                     this.log('Executing compiled code...');
                     const startTime = Date.now();
                     
-                    const results = vm.runInContext(
+                    const promise = vm.runInContext(
                         compilationCache.compiledCode,
                         compilationCache.context,
                         {
@@ -201,6 +166,9 @@ module.exports = (RED: NodeAPI) => {
                             displayErrors: true
                         }
                     );
+                    
+                    // Await the promise result
+                    const results = await promise;
                     
                     const executionTime = Date.now() - startTime;
                     this.log(`Execution completed in ${executionTime}ms`);
