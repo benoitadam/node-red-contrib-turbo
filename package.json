@@ -42,7 +42,8 @@
     "examples": "examples",
     "nodes": {
       "turbo-set": "dist/turbo-set.js",
-      "turbo-exec": "dist/turbo-exec.js"
+      "turbo-exec": "dist/turbo-exec.js",
+      "turbo-ts": "dist/turbo-ts.js"
     }
   },
   "devDependencies": {

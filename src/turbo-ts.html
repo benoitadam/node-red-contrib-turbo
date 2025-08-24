@@ -1,0 +1,127 @@
+<script type="text/javascript">
+    RED.nodes.registerType('turbo-ts', {
+        category: 'Turbo',
+        color: '#90EE90',
+        defaults: {
+            name: { value: "" },
+            script: { value: "" },
+            outputs: { value: 1 }
+        },
+        inputs: 1,
+        outputs: 1,
+        outputLabels: function(index) {
+            return 'result';
+        },
+        icon: "font-awesome/fa-code",
+        paletteLabel: 'typescript',
+        label: function() {
+            if (this.name) return this.name;
+            const script = this.script || "";
+            const preview = script.split('\n')[0];
+            const shortPreview = preview.length > 20 ? preview.substring(0, 20) + "..." : preview || "typescript";
+            return `ts: ${shortPreview}`;
+        },
+        oneditprepare: function() {
+            var that = this;
+            
+            function updateOutputs() {
+                var outputs = parseInt($("#node-input-outputs").val()) || 1;
+                that.outputs = outputs;
+            }
+            
+            this.editor = RED.editor.createEditor({
+                id: 'node-input-script-editor',
+                mode: 'ace/mode/typescript',
+                value: $("#node-input-script").val() || ""
+            });
+            
+            $("#node-input-outputs").change(function() {
+                updateOutputs();
+            });
+            
+            updateOutputs();
+        },
+        oneditsave: function() {
+            $("#node-input-script").val(this.editor.getValue());
+            this.editor.destroy();
+            delete this.editor;
+        },
+        oneditcancel: function() {
+            this.editor.destroy();
+            delete this.editor;
+        },
+        oneditresize: function(size) {
+            var rows = $("#dialog-form>div:not(.node-text-editor-row)");
+            var height = $("#dialog-form").height();
+            for (var i=0; i<rows.length; i++) {
+                height -= $(rows[i]).outerHeight(true);
+            }
+            var editorRow = $("#dialog-form>div.node-text-editor-row");
+            height -= (parseInt(editorRow.css("marginTop"))+parseInt(editorRow.css("marginBottom")));
+            $(".node-text-editor").css("height",height+"px");
+            this.editor.resize();
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="turbo-ts">
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row" style="margin-bottom:0px;">
+        <label for="node-input-script"><i class="icon-edit"></i> Script</label>
+        <input type="hidden" id="node-input-script">
+    </div>
+    <div class="form-row node-text-editor-row">
+        <div style="height: 300px; min-height:200px;" class="node-text-editor" id="node-input-script-editor" title="TypeScript code to execute. Use {{payload.property}} for template substitution."></div>
+    </div>
+    <div class="form-row">
+        <label for="node-input-outputs"><i class="icon-random"></i> Outputs</label>
+        <input type="number" id="node-input-outputs" placeholder="1" min="1" max="10" style="width:70px;" title="Number of outputs"> outputs
+    </div>
+</script>
+
+<script type="text/html" data-help-name="turbo-ts">
+    <p>Execute TypeScript code with configurable outputs.</p>
+    
+    <h3>Input Properties</h3>
+    <dl class="message-properties">
+        <dt>Any message <span class="property-type">object</span></dt>
+        <dd>Message passed to execution context and available for templating</dd>
+    </dl>
+
+    <h3>Output Properties</h3>
+    <dl class="message-properties">
+        <dt>payload <span class="property-type">any</span></dt>
+        <dd>Result of TypeScript execution</dd>
+    </dl>
+
+    <h3>Configuration</h3>
+    <ul>
+        <li><strong>Script:</strong> TypeScript code to execute</li>
+        <li><strong>Outputs:</strong> Number of outputs (1-10)</li>
+    </ul>
+
+    <h3>Template Variables</h3>
+    <p>Use <code>{{property.path}}</code> syntax in your script to access message properties:</p>
+    <pre>const name = "{{payload.name}}";
+console.log(`Hello ${name}!`);</pre>
+
+    <h3>Usage Example</h3>
+    <pre>interface User {
+    name: string;
+    age: number;
+}
+
+const user: User = {{payload}};
+const greeting = `Hello ${user.name}, you are ${user.age} years old!`;
+console.log(greeting);</pre>
+    
+    <h3>Security Notes</h3>
+    <ul>
+        <li>Code runs with Node-RED process permissions</li>
+        <li>Validate and sanitize input to prevent injection attacks</li>
+        <li>Be cautious with template variable substitution</li>
+    </ul>
+</script>
