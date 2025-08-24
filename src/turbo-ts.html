@@ -6,8 +6,7 @@
             name: { value: "" },
             script: { value: "" },
             outputs: { value: 1 },
-            useFunction: { value: false },
-            include: { value: true }
+            useFunction: { value: false }
         },
         inputs: 1,
         outputs: 1,
@@ -35,6 +34,41 @@
                 id: 'node-input-script-editor',
                 mode: 'ace/mode/typescript',
                 value: $("#node-input-script").val() || ""
+            });
+            
+            // Configure TypeScript completion for available globals
+            if (this.editor.completers) {
+                this.editor.completers.push({
+                    getCompletions: function(editor, session, pos, prefix, callback) {
+                        var completions = [
+                            // Node-RED context
+                            {name: "msg", value: "msg", score: 1000, meta: "node-red"},
+                            {name: "node", value: "node", score: 1000, meta: "node-red"},
+                            {name: "RED", value: "RED", score: 1000, meta: "node-red"},
+                            {name: "global", value: "global", score: 1000, meta: "node-red"},
+                            
+                            // Node.js modules (when include is enabled)
+                            {name: "fs", value: "fs", score: 900, meta: "nodejs"},
+                            {name: "path", value: "path", score: 900, meta: "nodejs"},
+                            {name: "os", value: "os", score: 900, meta: "nodejs"},
+                            {name: "crypto", value: "crypto", score: 900, meta: "nodejs"},
+                            {name: "util", value: "util", score: 900, meta: "nodejs"},
+                            {name: "Buffer", value: "Buffer", score: 900, meta: "nodejs"},
+                            {name: "fetch", value: "fetch", score: 900, meta: "nodejs"},
+                            
+                            // Common patterns
+                            {name: "return", value: "return ", score: 800, meta: "keyword"},
+                            {name: "await", value: "await ", score: 800, meta: "keyword"},
+                            {name: "async", value: "async ", score: 800, meta: "keyword"}
+                        ];
+                        callback(null, completions);
+                    }
+                });
+            }
+            
+            // Set editor options for better TypeScript support
+            this.editor.getSession().setOptions({
+                useWorker: false  // Disable syntax checking that doesn't know about our context
             });
             
             $("#node-input-outputs").change(function() {
@@ -85,12 +119,7 @@
     <div class="form-row">
         <label><i class="icon-cog"></i> Execution Mode</label>
         <input type="checkbox" id="node-input-useFunction" style="display:inline-block; width:auto; vertical-align:top;" title="Use Function constructor instead of VM (faster but less secure)">
-        <label for="node-input-useFunction" style="width:70%;" title="Use Function constructor instead of VM (faster but less secure)">Use Function mode (faster but less secure)</label>
-    </div>
-    <div class="form-row">
-        <label><i class="icon-book"></i> Include Libraries</label>
-        <input type="checkbox" id="node-input-include" style="display:inline-block; width:auto; vertical-align:top;" checked>
-        <label for="node-input-include" style="width:70%;" title="Include common Node.js modules (RED, node, global, fs, path, os, crypto, util, fetch, Buffer)">Include modules, node, global and RED</label>
+        <label for="node-input-useFunction" style="width:70%;" title="Use Function constructor instead of VM (faster but less secure)">Use Function mode (6x faster but less secure)</label>
     </div>
 </script>
 

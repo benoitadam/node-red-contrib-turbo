@@ -6,13 +6,11 @@ export interface TurboTypeScriptNodeDef extends NodeDef {
     script: string;
     outputs: number;
     useFunction: boolean;
-    include: boolean;
 }
 
 interface Compilation {
     script: string;
     useFunction: boolean;
-    include: boolean;
     exec: (msg: any) => Promise<any[]>,
 }
 
@@ -73,8 +71,8 @@ function compileTypeScript(node: Node, script: string): string {
     }
 }
 
-function newCompilation(node: Node, script: string, useFunction: boolean, include: boolean, RED: any): Compilation|undefined {
-    node.log(`TS: New Compilation (useFunction:${useFunction}, include:${include})`);
+function newCompilation(node: Node, script: string, useFunction: boolean, RED: any): Compilation|undefined {
+    node.log(`TS: New Compilation (useFunction:${useFunction})`);
     node.log(script);
 
     if (!script || script.trim().length === 0) {
@@ -85,22 +83,19 @@ function newCompilation(node: Node, script: string, useFunction: boolean, includ
     const compiledCode = compileTypeScript(node, `(async function() { ${script} })()`);
     node.log(`TS: compiledCode : \n${compiledCode}`);
     
-    const ctx: any = { msg: {} };
-    
-    if (include) {
-        Object.assign(ctx, {
-            fs: require('fs/promises'),
-            path: require('path'),
-            os: require('os'),
-            crypto: require('crypto'),
-            util: require('util'),
-            Buffer,
-            fetch: global.fetch || require('node-fetch').default,
-            node,
-            RED,
-            global,
-        });
-    }
+    const ctx: any = {
+        msg: {},
+        fs: require('fs/promises'),
+        path: require('path'),
+        os: require('os'),
+        crypto: require('crypto'),
+        util: require('util'),
+        Buffer: Buffer,
+        fetch: global.fetch || require('node-fetch').default,
+        node,
+        RED,
+        global,
+    };
 
     let exec: (msg: any) => Promise<any[]>;
 
@@ -127,7 +122,7 @@ function newCompilation(node: Node, script: string, useFunction: boolean, includ
             return outputs;
         }
     }
-    return { script, useFunction, include, exec };
+    return { script, useFunction, exec };
 }
 
 module.exports = (RED: NodeAPI) => {
@@ -142,18 +137,16 @@ module.exports = (RED: NodeAPI) => {
             try {
                 const script: string = def.script || '';
                 const useFunction: boolean = def.useFunction !== false;
-                const include: boolean = def.include !== false;
 
                 let comp = cache[this.id];
 
                 if (
                     !comp ||
                     comp.script !== script ||
-                    comp.useFunction !== useFunction ||
-                    comp.include !== include
+                    comp.useFunction !== useFunction
                 ) {
                     try {
-                        comp = newCompilation(this, script, useFunction, include, RED);
+                        comp = newCompilation(this, script, useFunction, RED);
                         if (!comp) return;
                         cache[this.id] = comp;
                         this.log('Script compiled and cached');
@@ -163,13 +156,8 @@ module.exports = (RED: NodeAPI) => {
                     }
                 }
                 
-                try {
-                    this.log('Executing compiled code...');
-                    const outputs = await comp.exec(msg);
-                    this.send(outputs);
-                } catch (error: any) {
-                    this.error(`turbo-ts error: ${error.message}`);
-                }
+                const outputs = await comp.exec(msg);
+                this.send(outputs);
 
             } catch (error: any) {
                 this.error(`turbo-ts error: ${error.message}`);
