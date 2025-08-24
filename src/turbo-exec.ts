@@ -8,7 +8,7 @@ export interface TurboExecNodeDef extends NodeDef {
     script: string;
     streaming: boolean;
     strip: boolean;
-    format: 'string' | 'buffer' | 'json' | 'split';
+    format: 'string' | 'buffer' | 'json' | 'split' | 'full';
     stdin: string;
     timeout: number;
     limit: number;
@@ -235,6 +235,7 @@ module.exports = (RED: NodeAPI) => {
                     format === 'split' ? (text: string) => (
                         text.split('\n').map(l => l.trim()).filter(l => l !== '')
                     ) :
+                    format === 'full' ? (text: string) => text :
                     format === 'string' ? (text: string) => text :
                     null
                 );
@@ -321,10 +322,15 @@ module.exports = (RED: NodeAPI) => {
                         exec.errBuffer = errBuffer;
                         exec.err = err;
 
+                        const payload =
+                            format === 'full' ? exec :
+                            exec.success ? out :
+                            err;
+
                         const exitEvent = {
                             ...msg,
                             topic: 'exit',
-                            payload: exec.success ? out : err,
+                            payload,
                             exec
                         };
                         
