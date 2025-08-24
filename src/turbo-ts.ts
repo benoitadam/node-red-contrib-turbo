@@ -1,5 +1,4 @@
 import { NodeAPI, Node, NodeDef } from 'node-red';
-import { spawn } from 'child_process';
 import * as vm from 'vm';
 
 export interface TurboTypeScriptNodeDef extends NodeDef {
@@ -15,142 +14,72 @@ interface CompilationCache {
     lastCompiled: number;
 }
 
-let tscAvailable = false;
-
-async function checkTsc(node: Node): Promise<boolean> {
-    return new Promise((resolve) => {
-        const child = spawn('tsc', ['--version'], { stdio: 'pipe' });
-        
-        child.on('close', (code) => {
-            if (code === 0) {
-                node.log('tsc is available');
-                resolve(true);
-            } else {
-                node.warn('tsc not found, attempting to install globally...');
-                installTsc(node).then(resolve).catch(() => resolve(false));
-            }
-        });
-        
-        child.on('error', () => {
-            node.warn('tsc not found, attempting to install globally...');
-            installTsc(node).then(resolve).catch(() => resolve(false));
-        });
-    });
+function checkTypeScriptAPI(node: Node): boolean {
+    try {
+        require('typescript');
+        node.log('TypeScript API available');
+        return true;
+    } catch (error) {
+        node.error('TypeScript API not available - please install typescript');
+        return false;
+    }
 }
 
-async function installTsc(node: Node): Promise<boolean> {
-    return new Promise((resolve) => {
-        node.log('Installing typescript globally...');
-        const child = spawn('npm', ['install', '-g', 'typescript'], { 
-            stdio: ['ignore', 'pipe', 'pipe'] 
-        });
-        
-        let stdout = '';
-        let stderr = '';
-        
-        child.stdout?.on('data', (data) => {
-            stdout += data.toString();
-        });
-        
-        child.stderr?.on('data', (data) => {
-            stderr += data.toString();
-        });
-        
-        child.on('close', (code) => {
-            if (code === 0) {
-                node.log('typescript installed successfully');
-                resolve(true);
-            } else {
-                node.error(`Failed to install typescript: ${stderr}`);
-                resolve(false);
-            }
-        });
-        
-        child.on('error', (error) => {
-            node.error(`Error installing typescript: ${error.message}`);
-            resolve(false);
-        });
-    });
-}
-
-async function compileTypeScript(script: string, node: Node): Promise<string> {
-    return new Promise((resolve, reject) => {
+function compileTypeScript(script: string, node: Node): string {
+    try {
         node.log(`Compiling TypeScript (${script.length} chars)`);
         
-        const child = spawn('tsc', [
-            '--target', 'es2020',
-            '--module', 'commonjs',
-            '--moduleResolution', 'node',
-            '--allowJs', 'true',
-            '--noImplicitAny', 'false',
-            '--strict', 'false',
-            '--skipLibCheck', 'true',
-            '--outDir', '/tmp',
-            '--rootDir', '.',
-            '/dev/stdin'
-        ], {
-            stdio: ['pipe', 'pipe', 'pipe']
+        const ts = require('typescript');
+        const result = ts.transpile(script, {
+            target: ts.ScriptTarget.ES2020,
+            module: ts.ModuleKind.CommonJS,
+            moduleResolution: ts.ModuleResolutionKind.NodeJs,
+            
+            // Maximum permissiveness - allow everything
+            allowJs: true,
+            allowUnreachableCode: true,
+            allowUnusedLabels: true,
+            
+            // Disable all strict checks
+            strict: false,
+            noImplicitAny: false,
+            noImplicitThis: false,
+            noImplicitReturns: false,
+            noImplicitUseStrict: false,
+            
+            // Disable all error checking
+            noUnusedLocals: false,
+            noUnusedParameters: false,
+            exactOptionalPropertyTypes: false,
+            noUncheckedIndexedAccess: false,
+            noPropertyAccessFromIndexSignature: false,
+            
+            // Skip all lib and declaration checks
+            skipLibCheck: true,
+            skipDefaultLibCheck: true,
+            
+            // Suppress warnings and errors
+            suppressExcessPropertyErrors: true,
+            suppressImplicitAnyIndexErrors: true,
+            
+            // Allow all JS features
+            allowSyntheticDefaultImports: true,
+            allowUmdGlobalAccess: true,
+            
+            // Disable emit checks
+            noEmitOnError: false,
+            
+            // Maximum compatibility
+            downlevelIteration: true,
+            importHelpers: false
         });
         
-        let stdout = '';
-        let stderr = '';
-        
-        child.stdout?.on('data', (data) => {
-            stdout += data.toString();
-        });
-        
-        child.stderr?.on('data', (data) => {
-            stderr += data.toString();
-        });
-        
-        child.on('close', (code) => {
-            if (code === 0 || stdout) {
-                node.log('TypeScript compilation successful');
-                // For tsc, we need to use a different approach since it doesn't output to stdout
-                // We'll use TypeScript API instead
-                const ts = require('typescript');
-                const result = ts.transpile(script, {
-                    target: ts.ScriptTarget.ES2020,
-                    module: ts.ModuleKind.CommonJS,
-                    moduleResolution: ts.ModuleResolutionKind.NodeJs,
-                    allowJs: true,
-                    noImplicitAny: false,
-                    strict: false,
-                    skipLibCheck: true
-                });
-                resolve(result);
-            } else {
-                node.error(`TypeScript compilation failed: ${stderr}`);
-                reject(new Error(`Compilation failed: ${stderr}`));
-            }
-        });
-        
-        child.on('error', (error) => {
-            node.error(`tsc spawn error: ${error.message}`);
-            // Fallback to TypeScript API
-            try {
-                const ts = require('typescript');
-                const result = ts.transpile(script, {
-                    target: ts.ScriptTarget.ES2020,
-                    module: ts.ModuleKind.CommonJS,
-                    moduleResolution: ts.ModuleResolutionKind.NodeJs,
-                    allowJs: true,
-                    noImplicitAny: false,
-                    strict: false,
-                    skipLibCheck: true
-                });
-                node.log('Used TypeScript API as fallback');
-                resolve(result);
-            } catch (tsError) {
-                reject(new Error(`TypeScript compilation error: ${tsError}`));
-            }
-        });
-        
-        if (child.stdin) {
-            child.stdin.write(script);
-            child.stdin.end();
-        }
-    });
+        node.log('TypeScript compilation successful');
+        return result;
+    } catch (error: any) {
+        node.error(`TypeScript compilation error: ${error.message}`);
+        throw new Error(`Compilation failed: ${error.message}`);
+    }
 }
 
 function createNodeRedContext(msg: any, node: Node, RED: NodeAPI): vm.Context {
@@ -178,31 +107,31 @@ module.exports = (RED: NodeAPI) => {
         
         const cache = new Map<string, CompilationCache>();
         
-        // Initialize esbuild on node startup
-        const initPromise = (async () => {
+        // Initialize TypeScript API on node startup
+        const initPromise = Promise.resolve((() => {
             try {
                 this.log('Initializing turbo-ts node...');
-                tscAvailable = await checkTsc(this);
+                const available = checkTypeScriptAPI(this);
                 
-                if (tscAvailable) {
+                if (available) {
                     this.log('turbo-ts ready');
                     return true;
                 } else {
-                    this.error('Failed to initialize tsc - node will not function');
+                    this.error('Failed to initialize TypeScript API - node will not function');
                     return false;
                 }
             } catch (error) {
                 this.error(`Initialization error: ${error}`);
                 return false;
             }
-        })();
+        })());
         
         this.on('input', async (msg: any) => {
             try {
                 // Wait for initialization to complete
                 const ready = await initPromise;
                 if (!ready) {
-                    this.error('Node not ready - tsc initialization failed');
+                    this.error('Node not ready - TypeScript API initialization failed');
                     return;
                 }
                 
@@ -226,7 +155,7 @@ module.exports = (RED: NodeAPI) => {
                     this.log('Compiling TypeScript script...');
                     
                     try {
-                        const compiledCode = await compileTypeScript(script, this);
+                        const compiledCode = compileTypeScript(script, this);
                         
                         // Wrap compiled code to capture results
                         const wrappedCode = `
