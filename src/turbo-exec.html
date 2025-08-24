@@ -44,10 +44,6 @@
                 var outputs = streaming ? 4 : 1;
                 $("#node-input-outputs").val(outputs);
                 that.outputs = outputs;
-                var outputsText = streaming 
-                    ? '4 outputs: start, out, err, exit' 
-                    : '1 output: exit';
-                $("#outputs-info").text(outputsText);
             }
             
             function updateEditor() {
@@ -180,6 +176,13 @@
         <label for="node-input-name"><i class="icon-tag"></i> Name</label>
         <input type="text" id="node-input-name" placeholder="Name">
     </div>
+    <div class="form-row" style="margin-bottom:0px;">
+        <label for="node-input-script"><i class="icon-edit"></i> Script</label>
+        <input type="hidden" id="node-input-script">
+    </div>
+    <div class="form-row node-text-editor-row">
+        <div style="height: 300px; min-height:200px;" class="node-text-editor" id="node-input-script-editor" title="Code to execute. Use {{payload.property}} for template substitution."></div>
+    </div>
     <div class="form-row">
         <label for="node-input-language"><i class="icon-code"></i> Language</label>
         <select id="node-input-language" style="width:70%;" title="Programming language to execute">
@@ -192,12 +195,13 @@
         </select>
     </div>
     <div class="form-row">
-        <label for="node-input-build"><i class="icon-wrench"></i> Build Command</label>
-        <input type="text" id="node-input-build" style="width:70%;" title="Build/compile command with {{scriptFile}} and {{buildFile}} placeholders">
-    </div>
-    <div class="form-row">
-        <label for="node-input-cmd"><i class="icon-play"></i> Runtime Command</label>
-        <input type="text" id="node-input-cmd" style="width:70%;" title="Execution command with {{buildFile}} or {{scriptFile}} placeholders">
+        <label for="node-input-format"><i class="icon-filter"></i> Output Format</label>
+        <select id="node-input-format" style="width:70%;" title="Output format for payload data">
+            <option value="string">String</option>
+            <option value="buffer">Buffer</option>
+            <option value="json">JSON</option>
+            <option value="split">Array (Split line \n)</option>
+        </select>
     </div>
     <div class="form-row">
         <label><i class="icon-exchange"></i> Streaming</label>
@@ -210,13 +214,9 @@
         <label for="node-input-strip" style="width:70%;" title="Remove color and formatting codes from output">Strip ANSI escape codes</label>
     </div>
     <div class="form-row">
-        <label for="node-input-format"><i class="icon-filter"></i> Format</label>
-        <select id="node-input-format" style="width:70%;" title="Output format for payload data">
-            <option value="string">String</option>
-            <option value="buffer">Buffer</option>
-            <option value="json">JSON</option>
-            <option value="split">Split by \n</option>
-        </select>
+        <label><i class="icon-environment-o"></i> Environment</label>
+        <input type="checkbox" id="node-input-env" style="display:inline-block; width:auto; vertical-align:top;" checked title="Pass Node-RED environment variables to process">
+        <label for="node-input-env" style="width:70%;" title="Pass Node-RED environment variables to process">Link environment variables</label>
     </div>
     <div class="form-row">
         <label for="node-input-stdin"><i class="icon-sign-in"></i> Stdin</label>
@@ -235,22 +235,15 @@
         <input type="text" id="node-input-cwd" placeholder="Leave empty for process.cwd()" style="width:70%;" title="Working directory for command execution">
     </div>
     <div class="form-row">
-        <label><i class="icon-environment-o"></i> Environment</label>
-        <input type="checkbox" id="node-input-env" style="display:inline-block; width:auto; vertical-align:top;" checked title="Pass Node-RED environment variables to process">
-        <label for="node-input-env" style="width:70%;" title="Pass Node-RED environment variables to process">Link environment variables</label>
-    </div>
-    <div class="form-row" style="margin-bottom:0px;">
-        <label for="node-input-script"><i class="icon-edit"></i> Script</label>
-        <input type="hidden" id="node-input-script">
-    </div>
-    <div class="form-row node-text-editor-row">
-        <div style="height: 200px; min-height:120px;" class="node-text-editor" id="node-input-script-editor" title="Code to execute. Use {{payload.property}} for template substitution."></div>
+        <label for="node-input-build"><i class="icon-wrench"></i> Build Command</label>
+        <input type="text" id="node-input-build" style="width:70%;" title="Build/compile command with {{scriptFile}} and {{buildFile}} placeholders">
     </div>
     <div class="form-row">
-        <input type="hidden" id="node-input-outputs">
-        <input type="hidden" id="node-input-updated">
-        <div id="outputs-info" style="font-style: italic; color: #666;"></div>
+        <label for="node-input-cmd"><i class="icon-play"></i> Runtime Command</label>
+        <input type="text" id="node-input-cmd" style="width:70%;" title="Execution command with {{buildFile}} or {{scriptFile}} placeholders">
     </div>
+    <input type="hidden" id="node-input-outputs">
+    <input type="hidden" id="node-input-updated">
 </script>
 
 <script type="text/html" data-help-name="turbo-exec">

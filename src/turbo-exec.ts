@@ -46,7 +46,8 @@ interface ExecEvent {
 }
 
 const isObject = <T extends {} = any>(v: unknown): v is T => typeof v === "object" && v !== null;
-const isString = (v: any): v is string => typeof v === 'string' && v.trim().length > 0;
+const isString = (v: any): v is string => typeof v === 'string';
+const isStringNotEmpty = (v: any): v is string => isString(v) && v.trim().length > 0
 const isNumber = (v: any): v is number => typeof v === 'number' && !Number.isNaN(v);
 const isBoolean = (v: any): v is boolean => v === true || v === false;
 
@@ -78,8 +79,12 @@ function writeToStdinSafe(cp: ChildProcessWithoutNullStreams, chunk: Buffer, nod
 }
 
 interface ExecData {
-    out: Buffer[],
-    err: Buffer[],
+    outChunks: Buffer[],
+    errChunks: Buffer[],
+    outBuffer?: Buffer<ArrayBuffer>,
+    errBuffer?: Buffer<ArrayBuffer>,
+    out?: any,
+    err?: any,
     start: number,
     end?: number,
     time: number,
@@ -161,17 +166,17 @@ module.exports = (RED: NodeAPI) => {
 
                 const propError = (prop: string) => new Error(`Property "${prop}" is required value: ${JSON.stringify((params as any)[prop])}`);
 
-                if (!isString(language)) throw propError('language');
-                if (!isString(script)) throw propError('script');
+                if (!isStringNotEmpty(language)) throw propError('language');
+                if (!isStringNotEmpty(script)) throw propError('script');
                 if (!isBoolean(streaming)) throw propError('streaming');
                 if (!isBoolean(strip)) throw propError('strip');
-                if (!isString(format)) throw propError('format');
+                if (!isStringNotEmpty(format)) throw propError('format');
                 if (!isString(stdin)) throw propError('stdin');
                 if (!isNumber(timeout) || timeout < 0) throw propError('timeout');
                 if (!isNumber(limit) || limit < 0) throw propError('limit');
                 if (!isString(build)) throw propError('build');
-                if (!isString(cmd)) throw propError('cmd');
-                if (!isString(cwd)) throw propError('cwd');
+                if (!isStringNotEmpty(cmd)) throw propError('cmd');
+                if (!isStringNotEmpty(cwd)) throw propError('cwd');
                 if (!isBoolean(env)) throw propError('env');
 
                 const limitBytes = limit > 0 ? limit * 1024 * 1024 : 0;
@@ -306,8 +311,8 @@ module.exports = (RED: NodeAPI) => {
 
                 const start = Date.now();
                 const exec: ExecData = {
-                    out: [],
-                    err: [],
+                    outChunks: [],
+                    errChunks: [],
                     start,
                     time: 0,
                     length: 0,
@@ -388,7 +393,7 @@ module.exports = (RED: NodeAPI) => {
                 cp.stdout?.on('data', (data: Buffer | string) => {
                     try {
                         const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data, encoding);
-                        exec.out.push(buffer);
+                        exec.outChunks.push(buffer);
                         exec.time = Date.now() - exec.start;
                         exec.length += buffer.length;
                         
@@ -414,7 +419,7 @@ module.exports = (RED: NodeAPI) => {
                 cp.stderr?.on('data', (data: Buffer | string) => {
                     try {
                         const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data, encoding);
-                        exec.err.push(buffer);
+                        exec.errChunks.push(buffer);
                         exec.time = Date.now() - exec.start;
                         exec.length += buffer.length;
                         
@@ -450,15 +455,25 @@ module.exports = (RED: NodeAPI) => {
                         
                         this.log(`Process closed with code: ${code}, signal: ${signal}, success: ${exec.success}`);
                         
-                        const buffer = Buffer.concat(exec.out)
-                        const payload = formatText !== null ?
-                            formatText(buffer.toString(encoding)) :
-                            buffer;
-                        
+                        const outBuffer = Buffer.concat(exec.outChunks)
+                        const out = formatText !== null ?
+                            formatText(outBuffer.toString(encoding)) :
+                            outBuffer;
+
+                        const errBuffer = Buffer.concat(exec.errChunks)
+                        const err = formatText !== null ?
+                            formatText(errBuffer.toString(encoding)) :
+                            errBuffer;
+
+                        exec.outBuffer = outBuffer;
+                        exec.out = out;
+                        exec.errBuffer = errBuffer;
+                        exec.err = err;
+
                         const exitEvent = {
                             ...msg,
                             topic: 'exit',
-                            payload,
+                            payload: exec.success ? out : err,
                             exec
                         };
                         
