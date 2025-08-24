@@ -4,7 +4,6 @@
         color: '#90EE90',
         defaults: {
             name: { value: "" },
-            language: { value: "sh" },
             script: { value: "" },
             streaming: { value: false },
             strip: { value: true },
@@ -12,8 +11,6 @@
             stdin: { value: "" },
             timeout: { value: 30 },
             limit: { value: 10 },
-            build: { value: "" },
-            cmd: { value: "" },
             cwd: { value: "" },
             env: { value: true },
             outputs: { value: 1 },
@@ -34,7 +31,7 @@
             const script = this.script || "";
             const preview = script.split('\n')[0];
             const shortPreview = preview.length > 20 ? preview.substring(0, 20) + "..." : preview || "exec";
-            return `${this.language}: ${shortPreview}`;
+            return `sh: ${shortPreview}`;
         },
         oneditprepare: function() {
             var that = this;
@@ -46,70 +43,6 @@
                 that.outputs = outputs;
             }
             
-            function updateEditor() {
-                var language = $("#node-input-language").val();
-                var mode = 'ace/mode/sh';
-                
-                switch (language) {
-                    case 'ts': mode = 'ace/mode/typescript'; break;
-                    case 'js': mode = 'ace/mode/javascript'; break;
-                    case 'py': mode = 'ace/mode/python'; break;
-                    case 'go': mode = 'ace/mode/golang'; break;
-                    default: mode = 'ace/mode/sh'; break;
-                }
-                
-                that.editor.getSession().setMode(mode);
-            }
-            
-            function updateCommands() {
-                var language = $("#node-input-language").val();
-                var buildInput = $("#node-input-build");
-                var cmdInput = $("#node-input-cmd");
-                
-                var commands = {
-                    'ts': [
-                        'tsc --target es2020 --module commonjs {{scriptFile}} --outFile {{buildFile}}',
-                        'node {{buildFile}}'
-                    ],
-                    'js': [
-                        '',
-                        'node {{scriptFile}}'
-                    ],
-                    'py': [
-                        '',
-                        'python {{scriptFile}}'
-                    ],
-                    'go': [
-                        'go build -o {{buildFile}} {{scriptFile}}',
-                        '{{buildFile}}'
-                    ],
-                    'sh': [
-                        '',
-                        '/bin/sh {{scriptFile}}'
-                    ],
-                    'custom': [
-                        '',
-                        ''
-                    ]
-                };
-                
-                var langCommands = commands[language] || commands['custom'];
-                var defaultBuild = langCommands[0];
-                var defaultCmd = langCommands[1];
-                
-                if (buildInput.val() === '' || buildInput.val() === buildInput.attr('data-default')) {
-                    buildInput.val(defaultBuild);
-                    buildInput.attr('data-default', defaultBuild);
-                }
-                
-                if (cmdInput.val() === '' || cmdInput.val() === cmdInput.attr('data-default')) {
-                    cmdInput.val(defaultCmd);
-                    cmdInput.attr('data-default', defaultCmd);
-                }
-                
-                // Mark as updated when commands change
-                markAsUpdated();
-            }
             
             function markAsUpdated() {
                 $("#node-input-updated").val(Date.now());
@@ -128,14 +61,6 @@
                 updateOutputs();
             });
             
-            $("#node-input-language").change(function() {
-                updateEditor();
-                updateCommands();
-            });
-            
-            $("#node-input-build, #node-input-cmd").on('input change', function() {
-                markAsUpdated();
-            });
             
             // Update timestamp when script editor changes
             var updateTimer;
@@ -145,7 +70,6 @@
             }
             
             updateOutputs();
-            updateCommands();
             markAsUpdated(); // Initial timestamp
         },
         oneditsave: function() {
@@ -182,17 +106,6 @@
     </div>
     <div class="form-row node-text-editor-row">
         <div style="height: 300px; min-height:200px;" class="node-text-editor" id="node-input-script-editor" title="Code to execute. Use {{payload.property}} for template substitution."></div>
-    </div>
-    <div class="form-row">
-        <label for="node-input-language"><i class="icon-code"></i> Language</label>
-        <select id="node-input-language" style="width:70%;" title="Programming language to execute">
-            <option value="sh">Bash</option>
-            <option value="ts">TypeScript</option>
-            <option value="js">JavaScript</option>
-            <option value="py">Python</option>
-            <option value="go">Go Lang</option>
-            <option value="custom">Select your language</option>
-        </select>
     </div>
     <div class="form-row">
         <label for="node-input-format"><i class="icon-filter"></i> Output Format</label>
@@ -233,14 +146,6 @@
     <div class="form-row">
         <label for="node-input-cwd"><i class="icon-folder-open"></i> Working Directory</label>
         <input type="text" id="node-input-cwd" placeholder="Leave empty for process.cwd()" style="width:70%;" title="Working directory for command execution">
-    </div>
-    <div class="form-row">
-        <label for="node-input-build"><i class="icon-wrench"></i> Build Command</label>
-        <input type="text" id="node-input-build" style="width:70%;" title="Build/compile command with {{scriptFile}} and {{buildFile}} placeholders">
-    </div>
-    <div class="form-row">
-        <label for="node-input-cmd"><i class="icon-play"></i> Runtime Command</label>
-        <input type="text" id="node-input-cmd" style="width:70%;" title="Execution command with {{buildFile}} or {{scriptFile}} placeholders">
     </div>
     <input type="hidden" id="node-input-outputs">
     <input type="hidden" id="node-input-updated">
