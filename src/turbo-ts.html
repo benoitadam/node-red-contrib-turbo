@@ -5,7 +5,9 @@
         defaults: {
             name: { value: "" },
             script: { value: "" },
-            outputs: { value: 1 }
+            outputs: { value: 1 },
+            useFunction: { value: false },
+            include: { value: true }
         },
         inputs: 1,
         outputs: 1,
@@ -79,6 +81,16 @@
     <div class="form-row">
         <label for="node-input-outputs"><i class="icon-random"></i> Outputs</label>
         <input type="number" id="node-input-outputs" placeholder="1" min="1" max="10" style="width:70px;" title="Number of outputs"> outputs
+    </div>
+    <div class="form-row">
+        <label><i class="icon-cog"></i> Execution Mode</label>
+        <input type="checkbox" id="node-input-useFunction" style="display:inline-block; width:auto; vertical-align:top;" title="Use Function constructor instead of VM (faster but less secure)">
+        <label for="node-input-useFunction" style="width:70%;" title="Use Function constructor instead of VM (faster but less secure)">Use Function mode (faster but less secure)</label>
+    </div>
+    <div class="form-row">
+        <label><i class="icon-book"></i> Include Libraries</label>
+        <input type="checkbox" id="node-input-include" style="display:inline-block; width:auto; vertical-align:top;" checked>
+        <label for="node-input-include" style="width:70%;" title="Include common Node.js modules (RED, node, global, fs, path, os, crypto, util, fetch, Buffer)">Include modules, node, global and RED</label>
     </div>
 </script>
 
