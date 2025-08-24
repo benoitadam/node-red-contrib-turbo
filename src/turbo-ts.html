@@ -36,7 +36,7 @@
                 value: $("#node-input-script").val() || ""
             });
             
-            // Configure TypeScript completion for available globals
+            // Configure completion for available globals
             if (this.editor.completers) {
                 this.editor.completers.push({
                     getCompletions: function(editor, session, pos, prefix, callback) {
@@ -47,7 +47,7 @@
                             {name: "RED", value: "RED", score: 1000, meta: "node-red"},
                             {name: "global", value: "global", score: 1000, meta: "node-red"},
                             
-                            // Node.js modules (when include is enabled)
+                            // Node.js modules
                             {name: "fs", value: "fs", score: 900, meta: "nodejs"},
                             {name: "path", value: "path", score: 900, meta: "nodejs"},
                             {name: "os", value: "os", score: 900, meta: "nodejs"},
@@ -56,7 +56,7 @@
                             {name: "Buffer", value: "Buffer", score: 900, meta: "nodejs"},
                             {name: "fetch", value: "fetch", score: 900, meta: "nodejs"},
                             
-                            // Common patterns
+                            // Keywords
                             {name: "return", value: "return ", score: 800, meta: "keyword"},
                             {name: "await", value: "await ", score: 800, meta: "keyword"},
                             {name: "async", value: "async ", score: 800, meta: "keyword"}
@@ -66,10 +66,15 @@
                 });
             }
             
-            // Set editor options for better TypeScript support
-            this.editor.getSession().setOptions({
-                useWorker: false  // Disable syntax checking that doesn't know about our context
-            });
+            // Add helpful template for new nodes
+            if (!$("#node-input-script").val() || $("#node-input-script").val().trim() === "") {
+                this.editor.setValue(`// Available: msg, node, RED, global, fs, path, os, crypto, util, Buffer, fetch
+// Use await directly, code runs in async function
+// Example:
+msg.payload = await fetch('https://api.example.com/data');
+return msg;
+`, -1);
+            }
             
             $("#node-input-outputs").change(function() {
                 updateOutputs();
@@ -117,7 +122,7 @@
         <input type="number" id="node-input-outputs" placeholder="1" min="1" max="10" style="width:70px;" title="Number of outputs"> outputs
     </div>
     <div class="form-row">
-        <label><i class="icon-cog"></i> Execution Mode</label>
+        <label><i class="icon-cog"></i> Execution</label>
         <input type="checkbox" id="node-input-useFunction" style="display:inline-block; width:auto; vertical-align:top;" title="Use Function constructor instead of VM (faster but less secure)">
         <label for="node-input-useFunction" style="width:70%;" title="Use Function constructor instead of VM (faster but less secure)">Use Function mode (6x faster but less secure)</label>
     </div>
