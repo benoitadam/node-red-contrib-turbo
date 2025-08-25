@@ -1,5 +1,6 @@
 import { NodeAPI, Node, NodeDef } from 'node-red';
 import * as vm from 'vm';
+import ts from 'typescript';
 
 export interface TurboTypeScriptNodeDef extends NodeDef {
     name: string;
@@ -18,56 +19,82 @@ function compileTypeScript(node: Node, script: string): string {
     try {
         node.log(`Compiling TypeScript (${script.length} chars)`);
         
-        const ts = require('typescript');
-        const result = ts.transpile(script, {
-            target: ts.ScriptTarget.ES2020,
-            module: ts.ModuleKind.CommonJS,
-            moduleResolution: ts.ModuleResolutionKind.NodeJs,
-            
-            // Maximum permissiveness - allow everything
-            allowJs: true,
-            allowUnreachableCode: true,
-            allowUnusedLabels: true,
-            
-            // Disable all strict checks
-            strict: false,
-            noImplicitAny: false,
-            noImplicitThis: false,
-            noImplicitReturns: false,
-            noImplicitUseStrict: false,
-            
-            // Disable all error checking
-            noUnusedLocals: false,
-            noUnusedParameters: false,
-            exactOptionalPropertyTypes: false,
-            noUncheckedIndexedAccess: false,
-            noPropertyAccessFromIndexSignature: false,
-            
-            // Skip all lib and declaration checks
-            skipLibCheck: true,
-            skipDefaultLibCheck: true,
-            
-            // Suppress warnings and errors
-            suppressExcessPropertyErrors: true,
-            suppressImplicitAnyIndexErrors: true,
-            
-            // Allow all JS features
-            allowSyntheticDefaultImports: true,
-            allowUmdGlobalAccess: true,
-            
-            // Disable emit checks
-            noEmitOnError: false,
-            
-            // Maximum compatibility
-            downlevelIteration: true,
-            importHelpers: false
+        const result = ts.transpileModule(script, {
+            compilerOptions: {
+                target: ts.ScriptTarget.ES2020,
+                module: ts.ModuleKind.CommonJS,
+                moduleResolution: ts.ModuleResolutionKind.NodeJs,
+                
+                // Maximum permissiveness - allow everything
+                allowJs: true,
+                allowUnreachableCode: true,
+                allowUnusedLabels: true,
+                
+                // Disable all strict checks
+                strict: false,
+                noImplicitAny: false,
+                noImplicitThis: false,
+                noImplicitReturns: false,
+                noImplicitUseStrict: false,
+                
+                // Disable all error checking
+                noUnusedLocals: false,
+                noUnusedParameters: false,
+                exactOptionalPropertyTypes: false,
+                noUncheckedIndexedAccess: false,
+                noPropertyAccessFromIndexSignature: false,
+                
+                // Skip all lib and declaration checks
+                skipLibCheck: true,
+                skipDefaultLibCheck: true,
+                
+                // Suppress warnings and errors
+                suppressExcessPropertyErrors: true,
+                suppressImplicitAnyIndexErrors: true,
+                
+                // Allow all JS features
+                allowSyntheticDefaultImports: true,
+                allowUmdGlobalAccess: true,
+                
+                // Disable emit checks
+                noEmitOnError: false,
+                
+                // Maximum compatibility
+                downlevelIteration: true,
+                importHelpers: false
+            }
         });
         
+        // Check for TypeScript diagnostics
+        if (result.diagnostics && result.diagnostics.length > 0) {
+            const errors = result.diagnostics.map(diagnostic => {
+                const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
+                if (diagnostic.file && diagnostic.start !== undefined) {
+                    const { line, character } = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start);
+                    return `Line ${line + 1}:${character + 1}: ${message}`;
+                }
+                return message;
+            }).join('\n');
+            
+            node.error(`TypeScript diagnostics:\n${errors}`);
+        }
+        
         node.log('TypeScript compilation successful');
-        return result;
+        return result.outputText;
     } catch (error: any) {
-        node.error(`TypeScript compilation error: ${error.message}`);
-        throw new Error(`Compilation failed: ${error.message}`);
+        const json: any = {};
+        try {
+            json.stack = String(error.stack);
+            json.message = String(error.message);
+            json.errorKeys = Object.keys(error);
+        } catch(e) {}
+        try {
+            const prototype = Object.getPrototypeOf(error);
+            json.prototypeType = String(typeof prototype);
+            json.prototypeKeys = Object.keys(prototype);
+            json.prototypeName = String(prototype.name);
+        } catch(e) {}
+        throw new Error(`Compilation failed: ${JSON.stringify(json)}`);
     }
 }
 
@@ -76,12 +103,10 @@ function newCompilation(node: Node, script: string, useFunction: boolean, RED: a
     node.log(script);
 
     if (!script || script.trim().length === 0) {
-        node.warn('TS: Empty script provided');
-        return;
+        throw new Error('Empty script provided');
     }
-    
+
     const compiledCode = compileTypeScript(node, `(async function() { ${script} })()`);
-    node.log(`TS: compiledCode : \n${compiledCode}`);
     
     const ctx: any = {
         msg: {},
@@ -101,7 +126,9 @@ function newCompilation(node: Node, script: string, useFunction: boolean, RED: a
 
     if (useFunction) {
         const funArgs = Object.keys(ctx);
-        const fun = new Function(...funArgs, `return ${compiledCode}`);
+        let fun: Function;
+        
+        fun = new Function(...funArgs, `return ${compiledCode}`);
         
         exec = async (msg) => {
             ctx.msg = msg;
@@ -122,6 +149,7 @@ function newCompilation(node: Node, script: string, useFunction: boolean, RED: a
             return outputs;
         }
     }
+    
     return { script, useFunction, exec };
 }
 
@@ -145,22 +173,17 @@ module.exports = (RED: NodeAPI) => {
                     comp.script !== script ||
                     comp.useFunction !== useFunction
                 ) {
-                    try {
-                        comp = newCompilation(this, script, useFunction, RED);
-                        if (!comp) return;
-                        cache[this.id] = comp;
-                        this.log('Script compiled and cached');
-                    } catch (error) {
-                        this.error(`turbo-ts compilation failed: ${error}`);
-                        return;
-                    }
+                    comp = newCompilation(this, script, useFunction, RED);
+                    if (!comp) return;
+                    cache[this.id] = comp;
+                    this.log('Script compiled and cached');
                 }
                 
                 const outputs = await comp.exec(msg);
                 this.send(outputs);
 
             } catch (error: any) {
-                this.error(`turbo-ts error: ${error.message}`);
+                this.error(error.stack || error.message);
             }
         });
         

@@ -1,7 +1,7 @@
 <script type="text/javascript">
     RED.nodes.registerType('turbo-exec', {
         category: 'Turbo',
-        color: '#90EE90',
+        color: '#ff94b7',
         defaults: {
             name: { value: "" },
             script: { value: "" },
@@ -31,7 +31,7 @@
             const script = this.script || "";
             const preview = script.split('\n')[0];
             const shortPreview = preview.length > 20 ? preview.substring(0, 20) + "..." : preview || "exec";
-            return `sh: ${shortPreview}`;
+            return shortPreview;
         },
         oneditprepare: function() {
             var that = this;

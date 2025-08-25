@@ -1,7 +1,7 @@
 <script type="text/javascript">
     RED.nodes.registerType('turbo-ts', {
         category: 'Turbo',
-        color: '#90EE90',
+        color: '#61adff',
         defaults: {
             name: { value: "" },
             script: { value: "" },
@@ -13,14 +13,10 @@
         outputLabels: function(index) {
             return 'result';
         },
-        icon: "font-awesome/fa-code",
+        icon: "ts.svg",
         paletteLabel: 'typescript',
         label: function() {
-            if (this.name) return this.name;
-            const script = this.script || "";
-            const preview = script.split('\n')[0];
-            const shortPreview = preview.length > 20 ? preview.substring(0, 20) + "..." : preview || "typescript";
-            return `ts: ${shortPreview}`;
+            return this.name || "typescript";
         },
         oneditprepare: function() {
             var that = this;
@@ -35,6 +31,18 @@
                 mode: 'ace/mode/typescript',
                 value: $("#node-input-script").val() || ""
             });
+            
+            // Configure TypeScript to understand our execution context
+            var session = this.editor.getSession();
+            console.log('[DEBUG] 1. Editor session created:', !!session);
+            
+            // Add a custom worker interceptor when the worker is created
+            var that = this;
+            console.log('[DEBUG] 2. Setting up worker interceptor with setTimeout');
+            
+            // Désactiver complètement le worker TypeScript (il n'existe pas dans Node-RED)
+            session.setUseWorker(false);
+            console.log('[DEBUG] TypeScript worker disabled - no more errors!');
             
             // Configure completion for available globals
             if (this.editor.completers) {

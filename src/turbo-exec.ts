@@ -33,7 +33,6 @@ interface ExecEvent {
     };
 }
 
-const isObject = <T extends {} = any>(v: unknown): v is T => typeof v === "object" && v !== null;
 const isString = (v: any): v is string => typeof v === 'string';
 const isStringNotEmpty = (v: any): v is string => isString(v) && v.trim().length > 0
 const isNumber = (v: any): v is number => typeof v === 'number' && !Number.isNaN(v);
@@ -109,8 +108,8 @@ module.exports = (RED: NodeAPI) => {
                 const strip: boolean = def.strip || msg.strip || true;
                 const format: string = def.format || msg.format || 'string';
                 const stdin: string = def.stdin || msg.stdin || '';
-                const timeout: number = def.timeout || msg.timeout || 30;
-                const limit: number = def.limit || msg.limit || 10;
+                const timeout: number = Number(def.timeout || msg.timeout || 30);
+                const limit: number = Number(def.limit || msg.limit || 10);
                 const cwd: string = def.cwd || msg.cwd || process.cwd();
                 const env: boolean = def.env || msg.env || true;
 
