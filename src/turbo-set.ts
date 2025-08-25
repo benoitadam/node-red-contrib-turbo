@@ -43,7 +43,7 @@ module.exports = (RED: NodeAPI) => {
                         return;
                 }
 
-                setPath(msg, target, value);
+                msg = setPath(msg, target, value);
                 this.send(msg);
             } catch (err) {
                 this.error(`Processing error in mode '${mode}': ${err instanceof Error ? err.message : String(err)}`);

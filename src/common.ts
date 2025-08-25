@@ -74,7 +74,7 @@ export const getPath = (obj: any, path: string): any => {
 * setPath({user: {}}, "user.settings.theme", "dark") // {user: {settings: {theme: "dark"}}}
 */
 export const setPath = (obj: any, path: string, value: any): any => {
- if (obj == null || !path) return obj;
+ if (typeof obj !== 'object' || !path || path === 'msg') return value;
  
  let current = obj;
  const parts = pathParts(path);
