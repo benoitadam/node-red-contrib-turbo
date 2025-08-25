@@ -13,6 +13,7 @@
             limit: { value: 10 },
             cwd: { value: "" },
             env: { value: true },
+            secure: { value: true },
             outputs: { value: 1 },
             updated: { value: 0 }
         },
@@ -131,6 +132,11 @@
         <label><i class="icon-environment-o"></i> Environment</label>
         <input type="checkbox" id="node-input-env" style="display:inline-block; width:auto; vertical-align:top;" checked title="Pass Node-RED environment variables to process">
         <label for="node-input-env" style="width:70%;" title="Pass Node-RED environment variables to process">Link environment variables</label>
+    </div>
+    <div class="form-row">
+        <label><i class="icon-shield"></i> Secure Mode</label>
+        <input type="checkbox" id="node-input-secure" style="display:inline-block; width:auto; vertical-align:top;" checked title="Add security headers to bash scripts">
+        <label for="node-input-secure" style="width:70%;" title="Add security headers to bash scripts">Add security headers (#!/bin/sh, set -eu)</label>
     </div>
     <div class="form-row">
         <label for="node-input-stdin"><i class="icon-sign-in"></i> Stdin</label>

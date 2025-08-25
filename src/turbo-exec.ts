@@ -14,6 +14,7 @@ export interface TurboExecNodeDef extends NodeDef {
     limit: number;
     cwd: string;
     env: boolean;
+    secure: boolean;
 }
 
 interface ExecEvent {
@@ -112,8 +113,9 @@ module.exports = (RED: NodeAPI) => {
                 const limit: number = Number(def.limit || msg.limit || 10);
                 const cwd: string = def.cwd || msg.cwd || process.cwd();
                 const env: boolean = def.env || msg.env || true;
+                const secure: boolean = def.secure !== undefined ? def.secure : (msg.secure !== undefined ? msg.secure : true);
 
-                const params = { script, streaming, strip, format, stdin, timeout, limit, cwd, env };
+                const params = { script, streaming, strip, format, stdin, timeout, limit, cwd, env, secure };
                 this.log(`turbo-exec executing with params: ${JSON.stringify(params)}`);
 
                 const propError = (prop: string) => new Error(`Property "${prop}" is required value: ${JSON.stringify((params as any)[prop])}`);
@@ -127,6 +129,7 @@ module.exports = (RED: NodeAPI) => {
                 if (!isNumber(limit) || limit < 0) throw propError('limit');
                 if (!isStringNotEmpty(cwd)) throw propError('cwd');
                 if (!isBoolean(env)) throw propError('env');
+                if (!isBoolean(secure)) throw propError('secure');
 
                 const limitBytes = limit > 0 ? limit * 1024 * 1024 : 0;
                 const encoding = 'utf8';
@@ -135,6 +138,15 @@ module.exports = (RED: NodeAPI) => {
                 
                 // Apply template directly and execute shell script
                 script = setTemplate(script, templateData);
+                
+                // Add security headers if secure mode is enabled
+                if (secure) {
+                    const securityHeader = '#!/bin/sh\nset -eu\n\n';
+                    if (!script.startsWith('#!')) {
+                        script = securityHeader + script;
+                    }
+                }
+                
                 this.log(`Executing shell script directly (${script.length} chars)`);
                 
                 const mainCmd = '/bin/sh';
