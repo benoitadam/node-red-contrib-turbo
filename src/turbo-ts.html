@@ -32,17 +32,47 @@
                 value: $("#node-input-script").val() || ""
             });
             
-            // Configure TypeScript to understand our execution context
+            // Configure Monaco TypeScript editor
             var session = this.editor.getSession();
-            console.log('[DEBUG] 1. Editor session created:', !!session);
             
-            // Add a custom worker interceptor when the worker is created
-            var that = this;
-            console.log('[DEBUG] 2. Setting up worker interceptor with setTimeout');
+            if (this.editor.type === "monaco") {
+                try {
+                    if (window.monaco && window.monaco.languages && window.monaco.languages.typescript) {
+                        var tsDefaults = window.monaco.languages.typescript.typescriptDefaults;
+                        if (tsDefaults) {
+                            console.log('[DEBUG] Configuring Monaco TypeScript defaults');
+                            tsDefaults.setDiagnosticsOptions({
+                                noSemanticValidation: true,
+                                noSyntaxValidation: false, // Garde la validation syntaxique de base
+                                noSuggestionDiagnostics: true
+                            });
+                            
+                            tsDefaults.setCompilerOptions({
+                                target: window.monaco.languages.typescript.ScriptTarget.ES2020,
+                                allowNonTsExtensions: true,
+                                moduleResolution: window.monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+                                module: window.monaco.languages.typescript.ModuleKind.CommonJS,
+                                noEmit: true,
+                                esModuleInterop: true,
+                                allowSyntheticDefaultImports: true,
+                                allowJs: true,
+                                typeRoots: ["node_modules/@types"]
+                            });
+                            
+                            console.log('[DEBUG] Monaco TypeScript configuration applied');
+                        }
+                    }
+                } catch (error) {
+                    console.log('[DEBUG] Could not configure Monaco TypeScript:', error);
+                }
+            } else {
+                console.log('[DEBUG] Using ACE Editor fallback configuration');
+                if (session.setAnnotations) {
+                    session.setAnnotations([]);
+                }
+            }
             
-            // Désactiver complètement le worker TypeScript (il n'existe pas dans Node-RED)
-            session.setUseWorker(false);
-            console.log('[DEBUG] TypeScript worker disabled - no more errors!');
+            console.log('[DEBUG] TypeScript editor configuration completed');
             
             // Configure completion for available globals
             if (this.editor.completers) {
@@ -54,6 +84,7 @@
                             {name: "node", value: "node", score: 1000, meta: "node-red"},
                             {name: "RED", value: "RED", score: 1000, meta: "node-red"},
                             {name: "global", value: "global", score: 1000, meta: "node-red"},
+                            {name: "env", value: "env", score: 1000, meta: "node-red"},
                             
                             // Node.js modules
                             {name: "fs", value: "fs", score: 900, meta: "nodejs"},
@@ -76,11 +107,19 @@
             
             // Add helpful template for new nodes
             if (!$("#node-input-script").val() || $("#node-input-script").val().trim() === "") {
-                this.editor.setValue(`// Available: msg, node, RED, global, fs, path, os, crypto, util, Buffer, fetch
-// Use await directly, code runs in async function
-// Example:
-msg.payload = await fetch('https://api.example.com/data');
-return msg;
+                this.editor.setValue(`// Available: msg, node, RED, global, env, fs, path, os, crypto, util, Buffer, fetch
+// Your code runs in an async function - await is available
+
+// Examples:
+const apiKey = env.get('API_KEY');
+const url = env.get('API_URL') || 'https://api.example.com/';
+const res = await fetch(url, { headers: { 'Authorization': apiKey } });
+const data = await res.json();
+
+return {
+    ...msg,
+    payload: data
+};
 `, -1);
             }
             
