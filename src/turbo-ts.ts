@@ -1,6 +1,12 @@
 import { NodeAPI, Node, NodeDef } from 'node-red';
 import * as vm from 'vm';
 import ts from 'typescript';
+import fs from 'fs/promises';
+import path from 'path';
+import os from 'os';
+import crypto from 'crypto';
+import util from 'util';
+import process from 'process';
 
 export interface TurboTypeScriptNodeDef extends NodeDef {
     name: string;
@@ -110,16 +116,64 @@ function newCompilation(node: Node, script: string, useFunction: boolean, RED: a
     
     const ctx: any = {
         msg: {},
-        fs: require('fs/promises'),
-        path: require('path'),
-        os: require('os'),
-        crypto: require('crypto'),
-        util: require('util'),
+        fs,
+        path,
+        os,
+        crypto,
+        util,
+        process,
+        require,
         Buffer: Buffer,
         fetch: global.fetch || require('node-fetch').default,
         node,
         RED,
-        global,
+        __global: global,
+        env: {
+            get: (envVar: string) => RED.util.getSetting(node, envVar)
+        },
+        setTimeout: function () {
+            var func = arguments[0];
+            var timerId: any;
+            arguments[0] = function() {
+                ctx.clearTimeout(timerId);
+                try {
+                    func.apply(this,arguments);
+                } catch(err) {
+                    node.error(err,{});
+                }
+            };
+            timerId = setTimeout.apply(this, arguments as any);
+            (node as any).outstandingTimers.push(timerId);
+            return timerId;
+        },
+        clearTimeout: function(id: any) {
+            clearTimeout(id);
+            var index = (node as any).outstandingTimers.indexOf(id);
+            if (index > -1) {
+                (node as any).outstandingTimers.splice(index,1);
+            }
+        },
+        setInterval: function() {
+            var func = arguments[0];
+            var timerId;
+            arguments[0] = function() {
+                try {
+                    func.apply(this,arguments);
+                } catch(err) {
+                    node.error(err,{});
+                }
+            };
+            timerId = setInterval.apply(this, arguments as any);
+            (node as any).outstandingIntervals.push(timerId);
+            return timerId;
+        },
+        clearInterval: function(id: any) {
+            clearInterval(id);
+            var index = (node as any).outstandingIntervals.indexOf(id);
+            if (index > -1) {
+                (node as any).outstandingIntervals.splice(index,1);
+            }
+        }
     };
 
     let exec: (msg: any) => Promise<any[]>;
@@ -132,6 +186,12 @@ function newCompilation(node: Node, script: string, useFunction: boolean, RED: a
         
         exec = async (msg) => {
             ctx.msg = msg;
+
+            const context = node.context();
+            ctx.context = context;
+            ctx.flow = context.flow;
+            ctx.global = context.global;
+
             const args = funArgs.map(k => ctx[k]);
             const outputs = fun(...args) as Promise<any[]>;
             return outputs;
