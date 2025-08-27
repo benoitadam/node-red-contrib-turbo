@@ -8,135 +8,19 @@ A collection of utility nodes for Node-RED that simplify common message manipula
 npm install node-red-contrib-turbo
 ```
 
+## Migration Notice
+
+> **⚠️ turbo-ts has been migrated**  
+> The `turbo-ts` node has been moved to a dedicated package: [`node-red-contrib-ts`](https://www.npmjs.com/package/node-red-contrib-ts)  
+> 
+> **For TypeScript support, please install:**
+> ```bash
+> npm install node-red-contrib-ts
+> ```
+> 
+> This package now focuses on utility nodes (`turbo-set`, `turbo-exec`) for message manipulation and shell execution.
+
 ## Available Nodes
-
-### turbo-ts
-
-Execute TypeScript code with full Node-RED context and modern JavaScript features.
-
-#### Configuration
-
-- **Script**: TypeScript code editor with Monaco syntax highlighting
-- **Outputs**: Number of outputs (1-10) 
-- **Execution Mode**: Function mode (faster but less secure) or VM mode (safer)
-
-#### Available Context
-
-The following variables are automatically available in your TypeScript code:
-
-| Variable | Type | Description | Example |
-|----------|------|-------------|---------|
-| **msg** | `any` | Current message object | `msg.payload`, `msg.topic` |
-| **node** | `Node` | Current node instance | `node.log('info')`, `node.warn('warning')` |
-| **RED** | `NodeAPI` | Node-RED API | `RED.util.getSetting()` |
-| **global** | `any` | Global context | `global.get('config')` |
-| **env** | `object` | Environment variables | `env.get('API_KEY')`, `env.get('DATABASE_URL')` |
-| **fs** | `Promise<fs>` | File system (promises) | `await fs.readFile('file.txt')` |
-| **path** | `path` | Path utilities | `path.join('/home', 'user')` |
-| **os** | `os` | Operating system | `os.hostname()`, `os.platform()` |
-| **crypto** | `crypto` | Cryptography | `crypto.randomUUID()` |
-| **util** | `util` | Node utilities | `util.promisify()` |
-| **Buffer** | `Buffer` | Buffer constructor | `Buffer.from('text')` |
-| **fetch** | `fetch` | HTTP client | `await fetch('https://api.com')` |
-| **process** | `process` | Process information | `process.env`, `process.version` |
-
-#### Usage Examples
-
-**Simple data transformation:**
-```typescript
-// Transform payload data
-const data = msg.payload;
-msg.payload = {
-    processed: true,
-    timestamp: new Date().toISOString(),
-    data: data.map(item => item.name.toLowerCase())
-};
-
-return msg;
-```
-
-**HTTP API call with environment variables:**
-```typescript
-// Get API credentials from environment
-const apiKey = env.get('API_KEY');
-const baseUrl = env.get('API_BASE_URL') || 'https://api.example.com';
-
-// Make authenticated request
-const response = await fetch(`${baseUrl}/users/${msg.payload.userId}`, {
-    headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-    }
-});
-
-const userData = await response.json();
-
-return {
-    ...msg,
-    payload: userData,
-    statusCode: response.status
-};
-```
-
-**File operations:**
-```typescript
-// Read configuration file
-const configPath = path.join(process.cwd(), 'config', 'app.json');
-const configData = await fs.readFile(configPath, 'utf8');
-const config = JSON.parse(configData);
-
-// Log system information
-node.log(`Running on ${os.platform()} ${os.arch()}`);
-node.log(`Node.js version: ${process.version}`);
-
-return {
-    ...msg,
-    payload: {
-        config,
-        system: {
-            platform: os.platform(),
-            hostname: os.hostname(),
-            nodeVersion: process.version
-        }
-    }
-};
-```
-
-**Multiple outputs:**
-```typescript
-// Process message and route to different outputs
-const data = msg.payload;
-const outputs = [];
-
-if (data.type === 'user') {
-    outputs[0] = { ...msg, payload: data }; // User output
-    outputs[1] = null; // No admin output
-} else if (data.type === 'admin') {
-    outputs[0] = null; // No user output  
-    outputs[1] = { ...msg, payload: data }; // Admin output
-}
-
-return outputs;
-```
-
-#### Features
-
-- ✅ **Full TypeScript support** with Monaco editor (VS Code editor)
-- ✅ **Async/await ready** - code runs in async function
-- ✅ **Rich context** - Access to Node-RED, Node.js APIs, and environment variables
-- ✅ **Multiple execution modes** - Function (fast) or VM (secure)
-- ✅ **Multiple outputs** - Support for 1-10 outputs with routing logic
-- ✅ **Monaco editor** - Syntax highlighting, IntelliSense, error detection
-- ✅ **Error handling** - Comprehensive error reporting and debugging
-- ✅ **TypeScript compilation** - Real-time TypeScript to JavaScript compilation
-
-#### Editor Improvements
-
-- **Monaco Editor Integration**: Uses the same editor as VS Code
-- **TypeScript Validation**: Smart error filtering for Node-RED context
-- **Auto-completion**: IntelliSense for all available context variables
-- **Syntax Highlighting**: Full TypeScript syntax highlighting
-- **Error Suppression**: Filters out false-positive errors for `await` usage
 
 ### turbo-set
 

@@ -1,6 +1,6 @@
 {
   "name": "node-red-contrib-turbo",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "Ensemble d'outils utilitaires pour Node-RED",
   "main": "dist/turbo-set.js",
   "keywords": [
@@ -8,7 +8,6 @@
     "exec",
     "bash",
     "script",
-    "typescript",
     "utilities",
     "tools",
     "turbo"
@@ -26,7 +25,6 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
-    "typescript": "^5.7.2",
     "node-fetch": "^3.3.2"
   },
   "scripts": {
@@ -42,8 +40,7 @@
     "examples": "examples",
     "nodes": {
       "turbo-set": "dist/turbo-set.js",
-      "turbo-exec": "dist/turbo-exec.js",
-      "turbo-ts": "dist/turbo-ts.js"
+      "turbo-exec": "dist/turbo-exec.js"
     }
   },
   "devDependencies": {
